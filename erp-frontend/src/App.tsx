@@ -5,6 +5,7 @@ import Produtos from './pages/Produtos';
 import Clientes from './pages/Clientes';
 import Servicos from './pages/Servicos';
 import PDV from './pages/PDV';
+import NotasHistorico from './pages/NotasHistorico';
 import './App.css';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/servicos" element={<Servicos />} />
             <Route path="/pdv" element={<PDV />} />
+            <Route path="/notas" element={<NotasHistorico />} />
           </Routes>
         </main>
       </div>

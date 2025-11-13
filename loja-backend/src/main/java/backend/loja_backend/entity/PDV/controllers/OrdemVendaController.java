@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.*;
 
 import backend.loja_backend.entity.Clientes;
 import backend.loja_backend.entity.PDV.dto.OrdemVendasDTO;
-
 import backend.loja_backend.entity.PDV.entity.OrdemVenda;
 import backend.loja_backend.entity.PDV.services.OrdemVendaService;
 import backend.loja_backend.repositories.ClienteRepository;
@@ -39,8 +38,8 @@ public class OrdemVendaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OrdemVenda>> listarTodas() {
-        return ResponseEntity.ok(ordemVendaService.listarTodas());
+    public List<OrdemVenda> listarOrdensVendas() {
+        return ordemVendaService.listarTodas();
     }
 
     @GetMapping("/{id}")

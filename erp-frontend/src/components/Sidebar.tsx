@@ -10,6 +10,7 @@ const Sidebar = () => {
     { path: '/produtos', label: 'Produtos', icon: '📦' },
     { path: '/clientes', label: 'Clientes', icon: '👥' },
     { path: '/servicos', label: 'Serviços', icon: '🔧' },
+    { path: '/notas', label: 'Notas', icon: '🧾' },
   ];
 
   return (
