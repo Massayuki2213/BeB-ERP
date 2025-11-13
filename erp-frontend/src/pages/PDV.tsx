@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import type { Produto, Cliente } from '../types';
 import type { ItemVenda } from '../types';
+import VendaResumoModal, { type VendaResumo } from '../components/VendaResumoModal';
 import './PDV.css';
 
 const PDV = () => {
@@ -14,6 +15,10 @@ const PDV = () => {
   const [formaPagamento, setFormaPagamento] = useState<string>('DINHEIRO');
   const [descricao, setDescricao] = useState<string>('');
   const [loading, setLoading] = useState(false);
+
+  // modal state
+  const [vendaResumo, setVendaResumo] = useState<VendaResumo | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     fetchProdutos();
@@ -87,6 +92,80 @@ const PDV = () => {
     return itensVenda.reduce((total, item) => total + item.precoTotal, 0);
   };
 
+  // gera o HTML do comprovante (usado para upload/impressão)
+  const gerarHtmlComprovante = (resumo: VendaResumo) => {
+    const clienteHtml = resumo.cliente ? `
+      <div><strong>Cliente:</strong> ${resumo.cliente.nome} ${resumo.cliente.email ? `• ${resumo.cliente.email}` : ''} ${resumo.cliente.telefone ? `• ${resumo.cliente.telefone}` : ''}</div>
+    ` : `<div><strong>Cliente:</strong> —</div>`;
+
+    const linhas = resumo.itens.map(i => `
+      <tr>
+        <td style="padding:6px 8px;text-align:center;">${i.quantidade}</td>
+        <td style="padding:6px 8px;">${i.nomeProduto}</td>
+        <td style="padding:6px 8px;text-align:right;">${formatPrice(i.precoUnitario)}</td>
+        <td style="padding:6px 8px;text-align:right;">${formatPrice(i.precoTotal)}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Comprovante Venda ${resumo.id ?? ''}</title>
+        <style>
+          body { font-family: Arial, Helvetica, sans-serif; color: #222; padding: 18px; }
+          h2 { margin-bottom: 6px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+          th, td { border-bottom: 1px solid #eee; }
+          th { text-align:left; padding: 8px; background:#f8f8f8; }
+          tfoot td { padding: 8px; font-weight: 700; border-top: 2px solid #ddd; }
+        </style>
+      </head>
+      <body>
+        <h2>Comprovante de Venda ${resumo.id ? '#'+resumo.id : ''}</h2>
+        ${clienteHtml}
+        <div><strong>Data:</strong> ${formatDateTime(resumo.dataVenda)}</div>
+        <div><strong>Forma Pagamento:</strong> ${resumo.formaPagamento ?? '—'}</div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width:10%;">Qtd</th>
+              <th>Produto</th>
+              <th style="width:18%;text-align:right;">Valor unit.</th>
+              <th style="width:18%;text-align:right;">Valor total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhas}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td></td>
+              <td style="text-align:right">TOTAL</td>
+              <td></td>
+              <td style="text-align:right">${formatPrice(resumo.valorTotal)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </body>
+      </html>
+    `;
+  };
+
+  // envia HTML como arquivo para o backend
+  const uploadComprovante = async (orderId: number, htmlContent: string) => {
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const fd = new FormData();
+    const fileName = `comprovante-${orderId}.html`;
+    fd.append('file', blob, fileName);
+
+    await api.post(`/ordens-venda/${orderId}/comprovante`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  };
+
   const finalizarVenda = async () => {
     if (!clienteSelecionado) {
       alert('Selecione um cliente');
@@ -115,9 +194,46 @@ const PDV = () => {
 
     try {
       setLoading(true);
-      await api.post('/ordens-venda', novaVenda);
-      alert('Venda finalizada com sucesso! ✓');
+      const resp = await api.post('/ordens-venda', novaVenda);
+      // resp.data deve conter a ordem criada (id, dataVenda etc) — ajusta se seu backend retornar diferente
+      const ordemCriada = resp.data || {};
 
+      // montar resumo (preferir dados retornados pelo backend quando disponíveis)
+      const resumo: VendaResumo = {
+        id: ordemCriada.id,
+        cliente: clientes.find(c => c.id === (clienteSelecionado as number)) ?? null,
+        dataVenda: ordemCriada.dataVenda ?? novaVenda.dataVenda,
+        itens: novaVenda.itensVendas.map((it: any) => {
+          // encontrar o item local com nome e preços (pelo produtoId)
+          const local = itensVenda.find(iv => iv.produtoId === it.produtoId);
+          return {
+            produtoId: it.produtoId,
+            nomeProduto: local?.nomeProduto ?? '',
+            quantidade: it.quantidade,
+            precoUnitario: it.precoUnitario ?? (local?.precoUnitario ?? 0),
+            precoTotal: it.precoTotal ?? (local?.precoTotal ?? ((local?.precoUnitario ?? 0) * it.quantidade))
+          } as ItemVenda;
+        }),
+        valorTotal: Number(ordemCriada.valorTotal ?? novaVenda.valorTotal),
+        formaPagamento: novaVenda.formaPagamento
+      };
+
+      // abre modal com resumo
+      setVendaResumo(resumo);
+      setModalOpen(true);
+
+      // tenta salvar automaticamente o comprovante (se o backend retornou id)
+      if (ordemCriada.id) {
+        try {
+          const html = gerarHtmlComprovante(resumo);
+          await uploadComprovante(ordemCriada.id, html);
+          // sucesso silencioso, se quiser notificar pode alertar
+        } catch (err) {
+          console.warn('Falha ao salvar comprovante automaticamente', err);
+        }
+      }
+
+      // limpar PDV
       setItensVenda([]);
       setClienteSelecionado('');
       setDescricao('');
@@ -145,6 +261,12 @@ const PDV = () => {
     }).format(price);
   };
 
+  const formatDateTime = (iso?: string) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  };
+
   return (
     <div className="page-container">
       <h1 className="page-title">PDV - Ponto de Venda</h1>
@@ -163,7 +285,6 @@ const PDV = () => {
                 <option key={cliente.id} value={cliente.id}>
                   {cliente.nome}
                 </option>
-                
               ))}
             </select>
           </div>
@@ -274,6 +395,16 @@ const PDV = () => {
           </div>
         </div>
       </div>
+
+      <VendaResumoModal
+        open={modalOpen}
+        venda={vendaResumo}
+        onClose={() => { setModalOpen(false); setVendaResumo(null); }}
+        onSaveComprovante={async (html) => {
+          if (!vendaResumo?.id) throw new Error('Ordem sem ID');
+          await uploadComprovante(vendaResumo.id, html);
+        }}
+      />
     </div>
   );
 };

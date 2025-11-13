@@ -1,0 +1,49 @@
+.notas-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.notas-controls input {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  min-width: 240px;
+}
+
+.notas-card {
+  overflow-x: auto;
+}
+
+.notas-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.notas-table th,
+.notas-table td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.notas-table th {
+  background-color: #fafafa;
+  font-weight: 600;
+}
+
+.notas-table tr:hover {
+  background-color: #f8f8f8;
+}
+
+.acoes button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+  margin: 0 4px;
+}
+
+.acoes button:hover {
+  transform: scale(1.2);
+}
