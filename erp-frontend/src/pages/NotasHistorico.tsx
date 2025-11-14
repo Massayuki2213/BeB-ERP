@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import VendaResumoModal from "../components/VendaResumoModal";
 import type { Cliente } from "../types";
-import "./NotasHistorico.css";
+import "./NotasHistorico.css"; // Importando o novo CSS
 
 interface Nota {
   id: number;
@@ -28,19 +28,16 @@ const NotasHistorico = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      // 1. Carrega Clientes
       try {
         const respClientes = await api.get("clientes");
         setClientes(respClientes.data || []);
       } catch (e) {
-        console.warn("Erro secundário ao carregar clientes.");
+        console.warn("Erro secundário clientes");
       }
 
-      // 2. Carrega Vendas
       const resp = await api.get("ordens-venda");
       const listaVendas = Array.isArray(resp.data) ? resp.data : [];
 
-      // 3. Mapeia e guarda itens
       const notasFormatadas = listaVendas.map((venda: any) => ({
         id: venda.id,
         clienteId: venda.cliente?.id,
@@ -50,14 +47,12 @@ const NotasHistorico = () => {
         itens: venda.itensVendas || []
       }));
 
-      // --- ORDENAÇÃO DECRESCENTE (Maior ID primeiro) ---
       notasFormatadas.sort((a: Nota, b: Nota) => b.id - a.id);
-
       setNotas(notasFormatadas);
 
     } catch (err) {
-      console.error("Erro ao carregar histórico:", err);
-      alert("Erro ao carregar vendas.");
+      console.error("Erro:", err);
+      // Opcional: mostrar toast de erro
     } finally {
       setLoading(false);
     }
@@ -69,7 +64,11 @@ const NotasHistorico = () => {
   const formatDateTime = (iso: string) => {
     if(!iso) return "-";
     try {
-      return new Date(iso).toLocaleString("pt-BR");
+      const d = new Date(iso);
+      return d.toLocaleString("pt-BR", { 
+        day: '2-digit', month: '2-digit', year: '2-digit', 
+        hour: '2-digit', minute: '2-digit' 
+      });
     } catch { return iso; }
   };
 
@@ -90,7 +89,7 @@ const NotasHistorico = () => {
   };
 
   const apagarVenda = async (id: number) => {
-    if(!window.confirm("Apagar venda #" + id + "?")) return;
+    if(!window.confirm("Tem certeza que deseja apagar o registro da venda #" + id + "?")) return;
     try {
       await api.delete(`ordens-venda/${id}`);
       setNotas(prev => prev.filter(n => n.id !== id));
@@ -99,50 +98,76 @@ const NotasHistorico = () => {
     }
   };
 
-  const handleSalvarComprovante = async (html: string) => {
-    console.log("Salvando comprovante...");
-    return Promise.resolve(); 
-  };
-
   return (
     <div className="page-container">
-      <h1 className="page-title">Histórico de Vendas</h1>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Histórico de Vendas</h1>
+          <p style={{color: '#666', marginTop: '4px', fontSize: '0.9rem'}}>
+            Consulte e gerencie todas as vendas realizadas.
+          </p>
+        </div>
+      </div>
       
-      <div className="notas-controls">
+      {/* CARD DE BUSCA */}
+      <div className="search-card">
         <input 
+          className="search-input"
           value={busca}
           onChange={e => setBusca(e.target.value)}
-          placeholder="🔍 Buscar venda..."
+          placeholder="🔍 Buscar por cliente, ID ou tipo..."
         />
       </div>
 
-      <div className="card notas-card">
-        {loading && <p>Carregando...</p>}
-        {!loading && notas.length === 0 && <p style={{padding:20}}>Nenhuma venda encontrada.</p>}
+      {/* CARD DA TABELA */}
+      <div className="table-card">
+        {loading && <div style={{padding: '40px', textAlign: 'center', color: '#666'}}>Carregando histórico...</div>}
+        
+        {!loading && notas.length === 0 && (
+          <div style={{padding: '40px', textAlign: 'center', color: '#888'}}>
+            Nenhuma venda encontrada.
+          </div>
+        )}
 
         {!loading && notas.length > 0 && (
-          <table className="notas-table">
+          <table className="historico-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th style={{width: '80px'}}>ID</th>
                 <th>Cliente</th>
-                <th>Data</th>
-                <th>Valor</th>
-                <th>Tipo</th>
-                <th>Ações</th>
+                <th>Data / Hora</th>
+                <th>Forma Pagto</th>
+                <th>Valor Total</th>
+                <th style={{width: '100px'}}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {filtrar().map(nota => (
                 <tr key={nota.id}>
-                  <td>{nota.id}</td>
-                  <td>{getNomeCliente(nota.clienteId)}</td>
-                  <td>{formatDateTime(nota.dataNota)}</td>
-                  <td>{formatPrice(nota.valor)}</td>
-                  <td>{nota.tipo}</td>
-                  <td className="acoes">
-                     <button onClick={() => { setNotaSelecionada(nota); setModalOpen(true); }}>👁️</button>
-                     <button onClick={() => apagarVenda(nota.id)} className="btn-delete">🗑️</button>
+                  <td className="col-id">#{nota.id}</td>
+                  <td style={{fontWeight: 500}}>{getNomeCliente(nota.clienteId)}</td>
+                  <td style={{color: '#555'}}>{formatDateTime(nota.dataNota)}</td>
+                  <td>
+                    <span className="badge-tipo">{nota.tipo.toLowerCase()}</span>
+                  </td>
+                  <td className="col-valor">{formatPrice(nota.valor)}</td>
+                  <td>
+                     <div className="actions-cell">
+                       <button 
+                         className="btn-icon btn-view" 
+                         onClick={() => { setNotaSelecionada(nota); setModalOpen(true); }}
+                         title="Ver Detalhes"
+                       >
+                         👁️
+                       </button>
+                       <button 
+                         className="btn-icon btn-delete" 
+                         onClick={() => apagarVenda(nota.id)}
+                         title="Excluir Registro"
+                       >
+                         🗑️
+                       </button>
+                     </div>
                   </td>
                 </tr>
               ))}
@@ -155,7 +180,6 @@ const NotasHistorico = () => {
         <VendaResumoModal
             open={modalOpen}
             onClose={() => { setModalOpen(false); setNotaSelecionada(null); }}
-            onSaveComprovante={handleSalvarComprovante}
             venda={{
                 id: notaSelecionada.id,
                 cliente: clientes.find(c => c.id === notaSelecionada.clienteId),

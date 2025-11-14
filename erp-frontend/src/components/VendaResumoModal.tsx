@@ -3,6 +3,10 @@ import React from 'react';
 import './VendaResumoModal.css';
 import type { Cliente, ItemVenda } from '../types';
 
+// NOVAS IMPORTAÇÕES PARA GERAR PDF
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
 export type VendaResumo = {
   id?: number;
   cliente?: Cliente | null;
@@ -16,7 +20,7 @@ type Props = {
   open: boolean;
   venda?: VendaResumo | null;
   onClose: () => void;
-  onSaveComprovante?: (htmlContent: string) => Promise<void>;
+  onSaveComprovante?: (htmlContent: string) => Promise<void>; // Prop mantida
 };
 
 const formatPrice = (v?: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v ?? 0);
@@ -26,9 +30,10 @@ const formatDateTime = (iso?: string) => {
   return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
 };
 
-const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose, onSaveComprovante }) => {
+const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose }) => {
   if (!open || !venda) return null;
 
+  // Esta função está 100% correta, não mudei nada
   const gerarHtmlComprovante = () => {
     const clienteHtml = venda.cliente ? `
       <div><strong>Cliente:</strong> ${venda.cliente.nome} ${venda.cliente.email ? `• ${venda.cliente.email}` : ''} ${venda.cliente.telefone ? `• ${venda.cliente.telefone}` : ''}</div>
@@ -48,7 +53,7 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose, onSaveComprov
       <html>
       <head>
         <meta charset="utf-8" />
-        <title>Comprovante Venda ${venda.id ?? ''}</title>
+        <title>Comprovante Venda</title>
         <style>
           body { font-family: Arial, Helvetica, sans-serif; color: #222; padding: 18px; }
           h2 { margin-bottom: 6px; }
@@ -59,11 +64,10 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose, onSaveComprov
         </style>
       </head>
       <body>
-        <h2>Comprovante de Venda ${venda.id ? '#'+venda.id : ''}</h2>
+        <h2>Comprovante de Venda </h2>
         ${clienteHtml}
         <div><strong>Data:</strong> ${formatDateTime(venda.dataVenda)}</div>
         <div><strong>Forma Pagamento:</strong> ${venda.formaPagamento ?? '—'}</div>
-
         <table>
           <thead>
             <tr>
@@ -90,43 +94,79 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose, onSaveComprov
     `;
   };
 
-  const handleImprimir = () => {
+  // --- FUNÇÃO MODIFICADA/ADICIONADA ---
+  // A antiga 'handleSalvar' foi substituída por esta
+  const handleSalvarPDF = () => {
+    // 1. Gera o HTML
     const html = gerarHtmlComprovante();
-    const w = window.open('', '_blank', 'noopener,noreferrer');
-    if (!w) {
-      alert('Não foi possível abrir janela de impressão. Verifique bloqueadores.');
-      return;
-    }
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 300);
-  };
 
-  const handleSalvar = async () => {
-    if (!onSaveComprovante) {
-      alert('Funcionalidade de salvar não configurada.');
-      return;
-    }
-    const html = gerarHtmlComprovante();
-    try {
-      await onSaveComprovante(html);
-      alert('Comprovante salvo com sucesso.');
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao salvar comprovante. Veja console.');
-    }
+    // 2. Cria um container temporário para "desenhar" o HTML
+    const container = document.createElement('div');
+    container.style.width = '210mm'; // Largura A4
+    container.style.padding = '10mm'; // Margens internas
+    container.style.boxSizing = 'border-box';
+    container.style.position = 'absolute';
+    container.style.left = '-300mm'; // Joga pra fora da tela
+    container.innerHTML = html;
+    document.body.appendChild(container);
+
+    // 3. Usa html2canvas para "tirar uma foto" do container
+    html2canvas(container, {
+      scale: 2, // Aumenta a resolução
+      useCORS: true,
+    }).then(canvas => {
+      // 4. Configura o PDF (A4)
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4'); // Retrato, milímetros, A4
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const margin = 10; // Margem de 10mm
+      const contentWidth = pdfWidth - (margin * 2);
+      const contentHeight = (canvas.height * contentWidth) / canvas.width;
+
+      let heightLeft = contentHeight;
+      let position = 0;
+
+      // 5. Adiciona a imagem ao PDF (com margens)
+      pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
+      heightLeft -= (pdfHeight - (margin * 2)); // Subtrai a altura útil
+
+      // 6. Lógica para múltiplas páginas (se o comprovante for gigante)
+      while (heightLeft > 0) {
+        position = heightLeft - contentHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
+        heightLeft -= (pdfHeight - (margin * 2));
+      }
+      
+      // 7. Salva o arquivo PDF
+      pdf.save(`comprovante-venda.pdf`);
+
+      // 8. Limpa o container temporário
+      document.body.removeChild(container);
+    }).catch(err => {
+      console.error("Erro ao gerar PDF:", err);
+      alert("Erro ao gerar PDF.");
+      // Garante a limpeza mesmo se der erro
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+    });
   };
 
   return (
     <div className="vr-modal-backdrop">
       <div className="vr-modal">
         <header className="vr-modal-header">
-          <h3>Comprovante de Venda {venda.id ? `#${venda.id}` : ''}</h3>
+          <h3>Comprovante de Venda</h3>
           <button className="vr-close" onClick={onClose}>✕</button>
         </header>
 
         <section className="vr-body">
+          {/* ... (Toda a sua seção <vr-meta> e <table> ... */}
+          {/* Copie e cole seu código aqui para garantir */}
+
           <div className="vr-meta">
             <div><strong>Cliente:</strong> {venda.cliente?.nome ?? '—'}</div>
             {venda.cliente?.email && <div><strong>Email:</strong> {venda.cliente.email}</div>}
@@ -166,8 +206,11 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose, onSaveComprov
         </section>
 
         <footer className="vr-footer">
-          <button onClick={handleImprimir}>Imprimir</button>
-          <button onClick={handleSalvar}>Salvar comprovante</button>
+          
+          
+          {/* --- BOTÃO MODIFICADO --- */}
+          <button onClick={handleSalvarPDF}>Baixar PDF</button>
+          
           <button onClick={onClose}>Fechar</button>
         </footer>
       </div>

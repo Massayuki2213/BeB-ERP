@@ -1,29 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import type { Produto } from '../types';
 import './Pages.css';
-import ProductSearch from '../components/ProductSearch';
-// Importe os novos componentes
+import './ProductSearch.css'; // Importa o CSS novo
+
+// Componentes
+import ProductFilters from '../components/ProductFilters'; // O novo componente acima
 import ProdutoFormModal from '../components/ProdutoFormModal';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 
+type SortKey = 'id' | 'nome' | 'precoVenda' | 'quantidadeEstoque';
+
 const Produtos = () => {
+  // --- Estados de Dados ---
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
-  // --- Novos Estados para os Modais ---
+  // --- Estados de Filtro ---
+  const [search, setSearch] = useState('');
+  const [minQtd, setMinQtd] = useState('');
+  const [maxQtd, setMaxQtd] = useState('');
+  
+  // --- Estados de Ordenação ---
+  const [sortKey, setSortKey] = useState<SortKey>('id');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // --- Estados dos Modais ---
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  
-  // Guarda o produto que está sendo editado (ou null se for "criar")
   const [produtoToEdit, setProdutoToEdit] = useState<Produto | null>(null);
-  
-  // Guarda o ID do produto a ser excluído
   const [produtoToDelete, setProdutoToDelete] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false); // Loading do delete
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // --- Funções de Fetch (sem mudança) ---
   useEffect(() => {
     fetchProdutos();
   }, []);
@@ -31,45 +40,69 @@ const Produtos = () => {
   const fetchProdutos = async () => {
     try {
       setLoading(true);
-      setError('');
       const response = await api.get<Produto[]>('/produtos');
-      setProdutos(response.data);
+      setProdutos(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
-      setError('Erro ao carregar produtos. Verifique se o backend está rodando.');
-      console.error('Erro:', err);
+      setError('Erro ao carregar produtos.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(price);
+  // --- Lógica de Filtragem e Ordenação Unificada ---
+  const filteredAndSortedProducts = useMemo(() => {
+    let result = [...produtos];
+
+    // 1. Filtro de Texto (Nome, ID, Preço)
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(p => 
+        p.nome.toLowerCase().includes(q) ||
+        String(p.id).includes(q) ||
+        String(p.precoVenda).includes(q)
+      );
+    }
+
+    // 2. Filtro de Quantidade (Range)
+    if (minQtd) {
+      result = result.filter(p => (p.quantidadeEstoque || 0) >= Number(minQtd));
+    }
+    if (maxQtd) {
+      result = result.filter(p => (p.quantidadeEstoque || 0) <= Number(maxQtd));
+    }
+
+    // 3. Ordenação
+    result.sort((a, b) => {
+      const valA = a[sortKey] ?? 0; // Trata null/undefined como 0 ou vazio
+      const valB = b[sortKey] ?? 0;
+      
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [produtos, search, minQtd, maxQtd, sortKey, sortOrder]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
   };
 
-  // --- Funções de Abertura dos Modais ---
+  // --- Helpers ---
+  const formatPrice = (price?: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price ?? 0);
+
+  // --- Handlers dos Modais (Iguais ao anterior) ---
+  const handleOpenCreate = () => { setProdutoToEdit(null); setIsFormModalOpen(true); };
+  const handleOpenEdit = (p: Produto) => { setProdutoToEdit(p); setIsFormModalOpen(true); };
+  const handleOpenDelete = (id: number) => { setProdutoToDelete(id); setIsDeleteModalOpen(true); };
   
-  // Abre o modal de "Novo Produto"
-  const handleOpenCreateModal = () => {
-    setProdutoToEdit(null); // Garante que não há produto selecionado
-    setIsFormModalOpen(true);
-  };
-
-  // Abre o modal de "Editar Produto"
-  const handleOpenEditModal = (produto: Produto) => {
-    setProdutoToEdit(produto); // Define o produto para edição
-    setIsFormModalOpen(true);
-  };
-
-  // Abre o modal de "Confirmar Exclusão"
-  const handleOpenDeleteModal = (id: number) => {
-    setProdutoToDelete(id);
-    setIsDeleteModalOpen(true);
-  };
-
-  // Fecha todos os modais e reseta os estados
   const handleCloseModals = () => {
     setIsFormModalOpen(false);
     setIsDeleteModalOpen(false);
@@ -77,105 +110,112 @@ const Produtos = () => {
     setProdutoToDelete(null);
   };
 
-  // Chamado quando o formulário é salvo com sucesso
-  const handleFormSuccess = () => {
-    handleCloseModals();
-    fetchProdutos(); // Recarrega a lista de produtos
-  };
+  const handleFormSuccess = () => { handleCloseModals(); fetchProdutos(); };
 
-  // --- Função de Delete (Atualizada) ---
   const handleDeleteConfirm = async () => {
-    if (produtoToDelete === null) return;
-
+    if (!produtoToDelete) return;
     setIsDeleting(true);
     try {
       await api.delete(`/produtos/${produtoToDelete}`);
-      // Remove da lista localmente (melhora a UI)
-      setProdutos(produtos.filter(p => p.id !== produtoToDelete));
+      setProdutos(prev => prev.filter(p => p.id !== produtoToDelete));
       handleCloseModals();
-      // alert('Produto excluído com sucesso!'); // Opcional
     } catch {
-      alert('Erro ao excluir produto. Tente novamente.');
+      alert('Erro ao excluir.');
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // --- Renderização do Componente ---
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1 className="page-title">Produtos</h1>
-        {/* Atualizado para abrir o modal de criação */}
-        <button className="btn-primary" onClick={handleOpenCreateModal}>
+        <div>
+          <h1 className="page-title">Gerenciar Produtos</h1>
+          <p style={{color: '#666', fontSize: '0.9rem'}}>Visualize e gerencie seu estoque</p>
+        </div>
+        <button className="btn-primary" onClick={handleOpenCreate}>
           + Novo Produto
         </button>
       </div>
 
-      {loading && <div className="loading">Carregando produtos...</div>}
-      
+      {/* Componente de Filtros (Separado mas controla os dados desta página) */}
+      <ProductFilters 
+        search={search} setSearch={setSearch}
+        minQtd={minQtd} setMinQtd={setMinQtd}
+        maxQtd={maxQtd} setMaxQtd={setMaxQtd}
+      />
+
+      {loading && <div className="loading">Carregando dados...</div>}
       {error && <div className="error-message">{error}</div>}
 
-      {!loading && !error && produtos.length === 0 && (
-        <div className="empty-state">
-          <p>Nenhum produto cadastrado.</p>
-        </div>
-      )}
-      <ProductSearch />
-      {!loading && !error && produtos.length > 0 && (
-        <div className="table-container">
+      {!loading && !error && (
+        <div className="table-card">
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Preço</th>
-                <th>Preço Custo</th>
-                <th>Quantidade</th>
+                <th onClick={() => handleSort('id')}>
+                  ID {sortKey === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th onClick={() => handleSort('nome')}>
+                  Nome {sortKey === 'nome' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th onClick={() => handleSort('precoVenda')}>
+                  Preço Venda {sortKey === 'precoVenda' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th onClick={() => handleSort('quantidadeEstoque')}>
+                  Estoque {sortKey === 'quantidadeEstoque' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {produtos.map((produto) => (
-                <tr key={produto.id}>
-                  <td>{produto.id}</td>
-                  <td>{produto.nome}</td>
-                  <td>{formatPrice(produto.precoVenda)}</td>
-                  <td>{formatPrice(produto.precoCusto)}</td>
-                  <td>{produto.quantidadeEstoque || '-'}</td>
-                  <td>
-                    {/* Atualizado para abrir o modal de edição */}
-                    <button className="btn-small btn-edit" onClick={() => handleOpenEditModal(produto)}>
-                      Editar
-                    </button>
-                    {/* Atualizado para abrir o modal de confirmação */}
-                    <button className="btn-small btn-delete" onClick={() => handleOpenDeleteModal(produto.id)}>
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filteredAndSortedProducts.length === 0 ? (
+                <tr><td colSpan={5} style={{textAlign: 'center', padding: 30}}>Nenhum produto encontrado.</td></tr>
+              ) : (
+                filteredAndSortedProducts.map((produto) => (
+                  <tr key={produto.id}>
+                    <td>#{produto.id}</td>
+                    <td style={{fontWeight: 500}}>{produto.nome}</td>
+                    <td>{formatPrice(produto.precoVenda)}</td>
+                    <td>
+                      <span style={{
+                        color: (produto.quantidadeEstoque || 0) < 5 ? 'red' : 'green',
+                        fontWeight: 'bold'
+                      }}>
+                        {produto.quantidadeEstoque || 0} un
+                      </span>
+                    </td>
+                    <td>
+                      <div className="btn-actions">
+                        <button className="btn-small btn-edit" onClick={() => handleOpenEdit(produto)}>
+                          Editar
+                        </button>
+                        <button className="btn-small btn-delete" onClick={() => handleOpenDelete(produto.id)}>
+                          Excluir
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* --- Renderização dos Modais (eles ficam invisíveis até serem abertos) --- */}
-      
+      {/* Modais */}
       <ProdutoFormModal
         isOpen={isFormModalOpen}
         onClose={handleCloseModals}
         onSuccess={handleFormSuccess}
         produtoToEdit={produtoToEdit}
       />
-
       <ConfirmDeleteModal
         isOpen={isDeleteModalOpen}
         onClose={handleCloseModals}
         onConfirm={handleDeleteConfirm}
         isLoading={isDeleting}
       />
-
     </div>
   );
 };

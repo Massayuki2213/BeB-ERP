@@ -1,0 +1,91 @@
+/* src/pages/ProductSearch.css */
+
+/* --- Container dos Filtros (Input branco com sombra) --- */
+.filters-container {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.filter-input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.filter-input:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+/* --- Estilização da Tabela Unificada (Card Branco) --- */
+.table-card {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden; /* Para arredondar os cantos da tabela */
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background-color: #f8f9fa;
+  color: #333;
+  font-weight: 600;
+  text-align: left;
+  padding: 15px;
+  border-bottom: 2px solid #eee;
+  cursor: pointer; /* Mostra a mãozinha para ordenar */
+  user-select: none;
+}
+
+.data-table th:hover {
+  background-color: #e9ecef;
+}
+
+.data-table td {
+  padding: 14px 15px;
+  border-bottom: 1px solid #f1f1f1;
+  color: #444;
+  font-size: 0.95rem;
+}
+
+/* Remove a borda da última linha */
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover {
+  background-color: #fdfdfd;
+}
+
+/* Botões de Ação (Editar/Excluir) na tabela */
+.btn-actions {
+  display: flex;
+  gap: 8px;
+}
