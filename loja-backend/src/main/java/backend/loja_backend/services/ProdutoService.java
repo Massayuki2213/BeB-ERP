@@ -1,3 +1,4 @@
+// loja-backend/src/main/java/backend/loja_backend/services/ProdutoService.java
 package backend.loja_backend.services;
 
 import java.util.Optional;
@@ -20,8 +21,8 @@ public class ProdutoService {
         return produtoRepositorie.findAll();
     }
 
-    public Optional<Produtos> buscarPorId(Long id) {
-        return produtoRepositorie.findById(id);
+    public Optional<Produtos> buscarPorId(Long idProduto) {
+        return produtoRepositorie.findById(idProduto);
     }
     
     public Produtos salvar(ProdutoDTO produtoDTO) {
@@ -31,23 +32,25 @@ public class ProdutoService {
         produto.setPrecoCusto(produtoDTO.getPrecoCusto());
         produto.setPrecoVenda(produtoDTO.getPrecoVenda());
         produto.setQuantidadeEstoque(produtoDTO.getQuantidadeEstoque());
+        produto.setCategoria(produtoDTO.getCategoria());
         return produtoRepositorie.save(produto);
     }
 
-    public Produtos atualizar(Long id, Produtos produtoAtualizado) {
-        return produtoRepositorie.findById(id)
+    public Produtos atualizar(Long idProduto, Produtos produtoAtualizado) {
+        return produtoRepositorie.findById(idProduto)
             .map(produto -> {
                 produto.setNome(produtoAtualizado.getNome());
                 produto.setDescricao(produtoAtualizado.getDescricao());
                 produto.setPrecoCusto(produtoAtualizado.getPrecoCusto());
                 produto.setPrecoVenda(produtoAtualizado.getPrecoVenda());
                 produto.setQuantidadeEstoque(produtoAtualizado.getQuantidadeEstoque());
+                produto.setCategoria(produtoAtualizado.getCategoria());
                 return produtoRepositorie.save(produto);
             })
             .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
     }
 
-    public void deletar(Long id) {
-        produtoRepositorie.deleteById(id);
+    public void deletar(Long idProduto) {
+        produtoRepositorie.deleteById(idProduto);
     }
 }

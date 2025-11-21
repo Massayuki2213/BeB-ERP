@@ -1,16 +1,16 @@
 // src/components/VendaResumoModal.tsx
 import React from 'react';
 import './VendaResumoModal.css';
-import type { Cliente, ItemVenda } from '../types';
+import type { ItemVenda } from '../types';
 
-// NOVAS IMPORTAÇÕES PARA GERAR PDF
+// Importações do PDF
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 export type VendaResumo = {
   id?: number;
-  cliente?: Cliente | null;
-  dataVenda: string; // ISO
+  cliente?: { nome: string; email?: string; telefone?: string } | null;
+  dataVenda: string;
   itens: ItemVenda[];
   valorTotal: number;
   formaPagamento?: string;
@@ -20,10 +20,11 @@ type Props = {
   open: boolean;
   venda?: VendaResumo | null;
   onClose: () => void;
-  onSaveComprovante?: (htmlContent: string) => Promise<void>; // Prop mantida
+  onSaveComprovante?: (htmlContent: string) => Promise<void>;
 };
 
 const formatPrice = (v?: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v ?? 0);
+
 const formatDateTime = (iso?: string) => {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -33,13 +34,21 @@ const formatDateTime = (iso?: string) => {
 const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose }) => {
   if (!open || !venda) return null;
 
-  // Esta função está 100% correta, não mudei nada
+  // --- 1. LÓGICA DE SEPARAÇÃO ---
+  // Verifica se é serviço pela flag isService (front) ou pelo tipo (back)
+  const isServico = (item: any) => item.isService === true || item.tipo === 'SERVICO';
+  
+  const listaProdutos = venda.itens.filter(i => !isServico(i));
+  const listaServicos = venda.itens.filter(i => isServico(i));
+
+  // --- 2. HTML PARA O PDF ---
   const gerarHtmlComprovante = () => {
     const clienteHtml = venda.cliente ? `
       <div><strong>Cliente:</strong> ${venda.cliente.nome} ${venda.cliente.email ? `• ${venda.cliente.email}` : ''} ${venda.cliente.telefone ? `• ${venda.cliente.telefone}` : ''}</div>
     ` : `<div><strong>Cliente:</strong> —</div>`;
 
-    const linhas = venda.itens.map(i => `
+    // Gera linhas de Produtos
+    const linhasProdutos = listaProdutos.map(i => `
       <tr>
         <td style="padding:6px 8px;text-align:center;">${i.quantidade}</td>
         <td style="padding:6px 8px;">${i.nomeProduto}</td>
@@ -47,6 +56,26 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose }) => {
         <td style="padding:6px 8px;text-align:right;">${formatPrice(i.precoTotal)}</td>
       </tr>
     `).join('');
+
+    // Gera linhas de Serviços (com cabeçalho se existir)
+    let linhasServicos = '';
+    if (listaServicos.length > 0) {
+      linhasServicos = `
+        <tr>
+          <td colspan="4" style="background-color: #f0f0f0; font-weight: bold; padding: 8px; font-size: 0.9em; border-bottom: 1px solid #ddd;">
+            SERVIÇOS / MÃO DE OBRA
+          </td>
+        </tr>
+        ${listaServicos.map(i => `
+          <tr>
+            <td style="padding:6px 8px;text-align:center;">-</td>
+            <td style="padding:6px 8px;">${i.nomeProduto}</td>
+            <td style="padding:6px 8px;text-align:right;">${formatPrice(i.precoUnitario)}</td>
+            <td style="padding:6px 8px;text-align:right;">${formatPrice(i.precoTotal)}</td>
+          </tr>
+        `).join('')}
+      `;
+    }
 
     return `
       <!doctype html>
@@ -72,13 +101,14 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose }) => {
           <thead>
             <tr>
               <th style="width:10%;">Qtd</th>
-              <th>Produto</th>
+              <th>Descrição</th>
               <th style="width:18%;text-align:right;">Valor unit.</th>
               <th style="width:18%;text-align:right;">Valor total</th>
             </tr>
           </thead>
           <tbody>
-            ${linhas}
+            ${linhasProdutos}
+            ${linhasServicos}
           </tbody>
           <tfoot>
             <tr>
@@ -94,45 +124,32 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose }) => {
     `;
   };
 
-  // --- FUNÇÃO MODIFICADA/ADICIONADA ---
-  // A antiga 'handleSalvar' foi substituída por esta
   const handleSalvarPDF = () => {
-    // 1. Gera o HTML
     const html = gerarHtmlComprovante();
-
-    // 2. Cria um container temporário para "desenhar" o HTML
     const container = document.createElement('div');
-    container.style.width = '210mm'; // Largura A4
-    container.style.padding = '10mm'; // Margens internas
-    container.style.boxSizing = 'border-box';
+    container.style.width = '210mm';
+    container.style.padding = '10mm';
     container.style.position = 'absolute';
-    container.style.left = '-300mm'; // Joga pra fora da tela
+    container.style.left = '-9999px';
+    container.style.background = 'white'; // Importante para o html2canvas
     container.innerHTML = html;
     document.body.appendChild(container);
 
-    // 3. Usa html2canvas para "tirar uma foto" do container
-    html2canvas(container, {
-      scale: 2, // Aumenta a resolução
-      useCORS: true,
-    }).then(canvas => {
-      // 4. Configura o PDF (A4)
+    html2canvas(container, { scale: 2, useCORS: true }).then(canvas => {
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4'); // Retrato, milímetros, A4
+      const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      const margin = 10; // Margem de 10mm
+      const margin = 10;
       const contentWidth = pdfWidth - (margin * 2);
       const contentHeight = (canvas.height * contentWidth) / canvas.width;
 
       let heightLeft = contentHeight;
       let position = 0;
 
-      // 5. Adiciona a imagem ao PDF (com margens)
       pdf.addImage(imgData, 'PNG', margin, position + margin, contentWidth, contentHeight);
-      heightLeft -= (pdfHeight - (margin * 2)); // Subtrai a altura útil
+      heightLeft -= (pdfHeight - (margin * 2));
 
-      // 6. Lógica para múltiplas páginas (se o comprovante for gigante)
       while (heightLeft > 0) {
         position = heightLeft - contentHeight;
         pdf.addPage();
@@ -140,18 +157,11 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose }) => {
         heightLeft -= (pdfHeight - (margin * 2));
       }
       
-      // 7. Salva o arquivo PDF
-      pdf.save(`comprovante-venda.pdf`);
-
-      // 8. Limpa o container temporário
+      pdf.save(`comprovante.pdf`);
       document.body.removeChild(container);
     }).catch(err => {
-      console.error("Erro ao gerar PDF:", err);
-      alert("Erro ao gerar PDF.");
-      // Garante a limpeza mesmo se der erro
-      if (document.body.contains(container)) {
-        document.body.removeChild(container);
-      }
+      console.error(err);
+      if (document.body.contains(container)) document.body.removeChild(container);
     });
   };
 
@@ -159,46 +169,68 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose }) => {
     <div className="vr-modal-backdrop">
       <div className="vr-modal">
         <header className="vr-modal-header">
-          <h3>Comprovante de Venda</h3>
+          <h3>Comprovante de Venda </h3>
           <button className="vr-close" onClick={onClose}>✕</button>
         </header>
 
         <section className="vr-body">
-          {/* ... (Toda a sua seção <vr-meta> e <table> ... */}
-          {/* Copie e cole seu código aqui para garantir */}
-
           <div className="vr-meta">
             <div><strong>Cliente:</strong> {venda.cliente?.nome ?? '—'}</div>
             {venda.cliente?.email && <div><strong>Email:</strong> {venda.cliente.email}</div>}
-            {venda.cliente?.telefone && <div><strong>Telefone:</strong> {venda.cliente.telefone}</div>}
             <div><strong>Data:</strong> {formatDateTime(venda.dataVenda)}</div>
-            <div><strong>Forma Pagamento:</strong> {venda.formaPagamento ?? '—'}</div>
+            <div><strong>Pagamento:</strong> {venda.formaPagamento ?? '—'}</div>
           </div>
 
+          {/* --- 3. JSX VISUAL (TABELA NA TELA) --- */}
           <table className="vr-table">
             <thead>
               <tr>
                 <th>Qtd</th>
-                <th>Produto</th>
-                <th style={{ textAlign: 'right' }}>Valor unit.</th>
-                <th style={{ textAlign: 'right' }}>Valor total</th>
+                <th>Descrição</th>
+                <th style={{ textAlign: 'right' }}>Unit.</th>
+                <th style={{ textAlign: 'right' }}>Total</th>
               </tr>
             </thead>
             <tbody>
-              {venda.itens.map((i, idx) => (
-                <tr key={idx}>
+              {/* Renderiza Produtos */}
+              {listaProdutos.map((i, idx) => (
+                <tr key={`prod-${idx}`}>
                   <td style={{ textAlign: 'center' }}>{i.quantidade}</td>
                   <td>{i.nomeProduto}</td>
                   <td style={{ textAlign: 'right' }}>{formatPrice(i.precoUnitario)}</td>
                   <td style={{ textAlign: 'right' }}>{formatPrice(i.precoTotal)}</td>
                 </tr>
               ))}
+
+              {/* Renderiza Serviços (Se houver) */}
+              {listaServicos.length > 0 && (
+                <>
+                  <tr>
+                    <td colSpan={4} style={{ 
+                      backgroundColor: '#f5f5f5', 
+                      fontWeight: 'bold', 
+                      paddingTop: '15px',
+                      borderBottom: '1px solid #ddd',
+                      color: '#555'
+                    }}>
+                      SERVIÇOS
+                    </td>
+                  </tr>
+                  {listaServicos.map((i, idx) => (
+                    <tr key={`serv-${idx}`}>
+                      <td style={{ textAlign: 'center' }}>-</td>
+                      <td>{i.nomeProduto}</td>
+                      <td style={{ textAlign: 'right' }}>{formatPrice(i.precoUnitario)}</td>
+                      <td style={{ textAlign: 'right' }}>{formatPrice(i.precoTotal)}</td>
+                    </tr>
+                  ))}
+                </>
+              )}
             </tbody>
             <tfoot>
               <tr>
-                <td></td>
+                <td colSpan={2}></td>
                 <td style={{ textAlign: 'right', fontWeight: 700 }}>TOTAL</td>
-                <td></td>
                 <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatPrice(venda.valorTotal)}</td>
               </tr>
             </tfoot>
@@ -206,12 +238,8 @@ const VendaResumoModal: React.FC<Props> = ({ open, venda, onClose }) => {
         </section>
 
         <footer className="vr-footer">
-          
-          
-          {/* --- BOTÃO MODIFICADO --- */}
-          <button onClick={handleSalvarPDF}>Baixar PDF</button>
-          
-          <button onClick={onClose}>Fechar</button>
+          <button onClick={handleSalvarPDF} className="btn-pdf">Baixar PDF</button>
+          <button onClick={onClose} className="btn-close">Fechar</button>
         </footer>
       </div>
     </div>

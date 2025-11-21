@@ -1,12 +1,14 @@
 // Interfaces para as entidades do backend
 
 export interface Produto {
+  idProduto: Key | null | undefined;
   id: number;
   nome: string;
   precoVenda: number;
   precoCusto: number;
   quantidadeEstoque?: number;
   descricao?: string;
+  categoria?: string;
 }
 
 export interface Cliente {

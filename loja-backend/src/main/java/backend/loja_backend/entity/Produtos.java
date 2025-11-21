@@ -1,3 +1,4 @@
+// loja-backend/src/main/java/backend/loja_backend/entity/Produtos.java
 package backend.loja_backend.entity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -8,7 +9,8 @@ import lombok.Data;
 public class Produtos {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id_produto")
+    private Long idProduto;
     private String nome;
     private String descricao;
     @Column (name = "preco_custo")
@@ -20,6 +22,8 @@ public class Produtos {
     public Integer getQuantidade() {
         return this.quantidadeEstoque;
     }
+    @Column (name = "categoria ")
+    private String categoria;
     public void setQuantidade(int quantidade) {
         this.quantidadeEstoque = quantidade;
     }

@@ -1,3 +1,4 @@
+// erp-frontend/src/pages/Produtos.tsx
 import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import type { Produto } from '../types';
@@ -60,7 +61,8 @@ const Produtos = () => {
       result = result.filter(p => 
         p.nome.toLowerCase().includes(q) ||
         String(p.id).includes(q) ||
-        String(p.precoVenda).includes(q)
+        String(p.precoVenda).includes(q) ||
+        (p.categoria && p.categoria.toLowerCase().includes(q))
       );
     }
 
@@ -159,6 +161,7 @@ const Produtos = () => {
                 <th onClick={() => handleSort('nome')}>
                   Nome {sortKey === 'nome' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
+                <th>Categoria</th>
                 <th onClick={() => handleSort('precoVenda')}>
                   Preço Venda {sortKey === 'precoVenda' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
@@ -173,9 +176,10 @@ const Produtos = () => {
                 <tr><td colSpan={5} style={{textAlign: 'center', padding: 30}}>Nenhum produto encontrado.</td></tr>
               ) : (
                 filteredAndSortedProducts.map((produto) => (
-                  <tr key={produto.id}>
-                    <td>#{produto.id}</td>
+                  <tr key={produto.idProduto}>
+                    <td>#{produto.idProduto}</td>
                     <td style={{fontWeight: 500}}>{produto.nome}</td>
+                    <td>{produto.categoria || '—'}</td>
                     <td>{formatPrice(produto.precoVenda)}</td>
                     <td>
                       <span style={{

@@ -17,6 +17,7 @@ const initialState = {
   precoVenda: 0,
   precoCusto: 0,
   quantidadeEstoque: 0,
+  categoria: '',
 };
 
 const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: ProdutoFormModalProps) => {
@@ -35,6 +36,7 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
         precoVenda: produtoToEdit.precoVenda,
         precoCusto: produtoToEdit.precoCusto,
         quantidadeEstoque: produtoToEdit.quantidadeEstoque || 0,
+        categoria: produtoToEdit.categoria || '',
       });
     } else {
       setFormData(initialState); // Limpa o formulário para "Novo Produto"
@@ -60,6 +62,7 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
       precoVenda: typeof formData.precoVenda === 'string' ? parseFloat(formData.precoVenda) || 0 : formData.precoVenda || 0,
       precoCusto: typeof formData.precoCusto === 'string' ? parseFloat(formData.precoCusto) || 0 : formData.precoCusto || 0,
       quantidadeEstoque: typeof formData.quantidadeEstoque === 'string' ? parseInt(formData.quantidadeEstoque) || 0 : formData.quantidadeEstoque || 0,
+      categoria: formData.categoria || '',
     };
 
     try {
@@ -113,6 +116,18 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
         <div className="form-group">
           <label htmlFor="nome">Nome</label>
           <input type="text" id="nome" name="nome" value={formData.nome} onChange={handleChange} required />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="categoria">Categoria</label>
+          <input 
+            type="text" 
+            id="categoria" 
+            name="categoria" 
+            value={formData.categoria} 
+            onChange={handleChange} 
+            placeholder="Ex: Som, Lanternagem, Insulfilm..."
+          />
         </div>
 
         <div className="form-group-row">

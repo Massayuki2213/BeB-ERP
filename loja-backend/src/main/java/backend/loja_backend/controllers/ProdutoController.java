@@ -1,3 +1,4 @@
+// loja-backend/src/main/java/backend/loja_backend/controllers/ProdutoController.java
 package backend.loja_backend.controllers;
 
 import backend.loja_backend.services.ProdutoService;
