@@ -302,7 +302,7 @@ const PDV = () => {
             <div className="servico-form-col">
               <input
                 type="text"
-                placeholder="Descrição (ex: Instalação, Frete...)"
+                placeholder="Tipo de serviço..."
                 className="text-input"
                 value={servicoNome}
                 onChange={e => setServicoNome(e.target.value)}

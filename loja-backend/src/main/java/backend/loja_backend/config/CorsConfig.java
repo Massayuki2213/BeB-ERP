@@ -1,3 +1,4 @@
+// loja-backend/src/main/java/backend/loja_backend/config/CorsConfig.java
 package backend.loja_backend.config;
 
 import org.springframework.context.annotation.Bean;
