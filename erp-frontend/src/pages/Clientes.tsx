@@ -8,6 +8,10 @@ const Clientes = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [showModal, setShowModal] = useState<boolean>(false);
+  
+  // Estado para controlar se estamos editando (guarda o ID) ou criando (null)
+  const [editId, setEditId] = useState<number | null>(null);
+
   const [novoCliente, setNovoCliente] = useState({
     nome: '',
     telefone: '',
@@ -46,23 +50,60 @@ const Clientes = () => {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  // Função para limpar o formulário e fechar o modal
+  const resetModal = () => {
+    setEditId(null);
+    setNovoCliente({
+      nome: '',
+      telefone: '',
+      email: '',
+      endereco: '',
+      cpfCnpj: ''
+    });
+    setShowModal(false);
+  };
+
+  // Função chamada ao clicar no botão "Editar" da tabela
+  const handleEdit = (cliente: Cliente) => {
+    setEditId(cliente.id);
+    setNovoCliente({
+      nome: cliente.nome,
+      telefone: cliente.telefone || '',
+      email: cliente.email || '',
+      endereco: cliente.endereco || '',
+      cpfCnpj: cliente.cpfCnpj || ''
+    });
+    setShowModal(true);
+  };
+
+  // Função chamada ao clicar em "+ Novo Cliente"
+  const handleOpenNew = () => {
+    resetModal(); // Garante que está limpo
+    setShowModal(true); // Abre
+  };
+
+  // Função unificada para Salvar (Criação ou Edição)
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await api.post('/clientes', novoCliente);
-      setClientes([...clientes, response.data]);
-      alert('Cliente cadastrado com sucesso!');
-      setShowModal(false);
-      setNovoCliente({
-        nome: '',
-        telefone: '',
-        email: '',
-        endereco: '',
-        cpfCnpj: ''
-      });
+      if (editId) {
+        // --- ATUALIZAR (PUT) ---
+        const response = await api.put(`/clientes/${editId}`, novoCliente);
+        
+        // Atualiza a lista substituindo o antigo pelo novo
+        setClientes(clientes.map(c => c.id === editId ? response.data : c));
+        alert('Cliente atualizado com sucesso!');
+      } else {
+        // --- CRIAR (POST) ---
+        const response = await api.post('/clientes', novoCliente);
+        setClientes([...clientes, response.data]);
+        alert('Cliente cadastrado com sucesso!');
+      }
+      
+      resetModal();
     } catch (error) {
       console.error(error);
-      alert('Erro ao cadastrar cliente. Tente novamente.');
+      alert('Erro ao salvar. Verifique os dados e tente novamente.');
     }
   };
 
@@ -70,7 +111,8 @@ const Clientes = () => {
     <div className="page-container">
       <div className="page-header">
         <h1 className="page-title">Clientes</h1>
-        <button className="btn-primary" onClick={() => setShowModal(true)}>+ Novo Cliente</button>
+        {/* Agora chama handleOpenNew para garantir form limpo */}
+        <button className="btn-primary" onClick={handleOpenNew}>+ Novo Cliente</button>
       </div>
 
       {loading && <div className="loading">Carregando clientes...</div>}
@@ -102,7 +144,8 @@ const Clientes = () => {
                   <td>{cliente.email || '-'}</td>
                   <td>{cliente.telefone || '-'}</td>
                   <td>
-                    <button className="btn-small btn-edit">Editar</button>
+                    {/* Botão Editar corrigido */}
+                    <button className="btn-small btn-edit" onClick={() => handleEdit(cliente)}>Editar</button>
                     <button className="btn-small btn-delete" onClick={() => handleDelete(cliente.id)}>Excluir</button>
                   </td>
                 </tr>
@@ -112,12 +155,12 @@ const Clientes = () => {
         </div>
       )}
 
-      {/* MODAL */}
+      {/* MODAL (Reutilizado para Criar e Editar) */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal">
-            <h2>Novo Cliente</h2>
-            <form onSubmit={handleCreate} className="modal-form">
+            <h2>{editId ? 'Editar Cliente' : 'Novo Cliente'}</h2>
+            <form onSubmit={handleSave} className="modal-form">
               <label>Nome</label>
               <input
                 type="text"
@@ -156,7 +199,7 @@ const Clientes = () => {
 
               <div className="modal-buttons">
                 <button type="submit" className="btn-primary">Salvar</button>
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                <button type="button" className="btn-secondary" onClick={resetModal}>Cancelar</button>
               </div>
             </form>
           </div>
