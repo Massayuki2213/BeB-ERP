@@ -1,191 +1,190 @@
 // src/components/ProdutoFormModal.tsx
 import { useState, useEffect } from 'react';
-import Modal from './Modal';
-import api from '../services/api'; // Seu 'api' service
-import type { Produto } from '../types'; // Nosso 'types'
+import api from '../services/api';
+import type { Produto } from '../types';
+import '../pages/Pages.css'; // Garante que pegue os estilos globais
+
+// Ícone de Fechar (X)
+const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 
 type ProdutoFormModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void; // Para atualizar a lista de produtos no pai
-  produtoToEdit: Produto | null; // Se for 'null', é modo "Criar". Se tiver um produto, é "Editar"
+  onSuccess: () => void;
+  produtoToEdit: Produto | null;
 };
 
-// Estado inicial do formulário
 const initialState = {
   nome: '',
-  precoVenda: 0,
-  precoCusto: 0,
-  quantidadeEstoque: 0,
+  precoVenda: '' as string | number, // Usar string no input facilita a digitação
+  precoCusto: '' as string | number,
+  quantidadeEstoque: '' as string | number,
   categoria: '',
 };
 
 const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: ProdutoFormModalProps) => {
   const [formData, setFormData] = useState(initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
+  
+  const isEditMode = !!produtoToEdit;
 
-  const isEditMode = produtoToEdit !== null;
-
-  // Efeito para popular o formulário quando for modo de edição
+  // Popula o formulário ao abrir
   useEffect(() => {
-    if (isEditMode) {
-      // Garante que o formulário é populado apenas com os campos necessários
-      setFormData({
-        nome: produtoToEdit.nome,
-        precoVenda: produtoToEdit.precoVenda,
-        precoCusto: produtoToEdit.precoCusto,
-        quantidadeEstoque: produtoToEdit.quantidadeEstoque || 0,
-        categoria: produtoToEdit.categoria || '',
-      });
-    } else {
-      setFormData(initialState); // Limpa o formulário para "Novo Produto"
+    if (isOpen) {
+      if (produtoToEdit) {
+        setFormData({
+          nome: produtoToEdit.nome,
+          precoVenda: produtoToEdit.precoVenda,
+          precoCusto: produtoToEdit.precoCusto,
+          quantidadeEstoque: produtoToEdit.quantidadeEstoque || 0,
+          categoria: produtoToEdit.categoria || '',
+        });
+      } else {
+        setFormData(initialState);
+      }
     }
-  }, [produtoToEdit, isEditMode, isOpen]); // 'isOpen' garante que limpe ao abrir
+  }, [isOpen, produtoToEdit]);
+
+  // Se não estiver aberto, nem renderiza (Evita erros de DOM)
+  if (!isOpen) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value
-    }));
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setFormError('');
 
-    // Normaliza os dados do formulário antes de enviar
-    const produtoData = {
-      nome: formData.nome,
-      precoVenda: typeof formData.precoVenda === 'string' ? parseFloat(formData.precoVenda) || 0 : formData.precoVenda || 0,
-      precoCusto: typeof formData.precoCusto === 'string' ? parseFloat(formData.precoCusto) || 0 : formData.precoCusto || 0,
-      quantidadeEstoque: typeof formData.quantidadeEstoque === 'string' ? parseInt(formData.quantidadeEstoque) || 0 : formData.quantidadeEstoque || 0,
-      categoria: formData.categoria || '',
+    // Converte para números antes de enviar
+    const payload = {
+      ...formData,
+      precoVenda: Number(formData.precoVenda),
+      precoCusto: Number(formData.precoCusto),
+      quantidadeEstoque: Number(formData.quantidadeEstoque),
     };
 
     try {
       if (isEditMode && produtoToEdit) {
-        // Tentar PUT (RESTful). Se o backend não aceitar PUT, tentar PATCH e por último POST /{id}
-        try {
-          await api.put(`/produtos/${produtoToEdit.id}`, produtoData);
-        } catch (putErr: any) {
-          const status = putErr?.response?.status;
-          console.warn('PUT falhou com status', status, '; tentando PATCH...', putErr);
-          if (status === 405) {
-            try {
-              await api.patch(`/produtos/${produtoToEdit.id}`, produtoData);
-            } catch (patchErr: any) {
-              const patchStatus = patchErr?.response?.status;
-              console.warn('PATCH falhou com status', patchStatus, '; tentando POST /{id}...', patchErr);
-              // tentativa final: POST com id na url (alguns backends usam convenção diferente)
-              await api.post(`/produtos/${produtoToEdit.id}`, produtoData);
-            }
-          } else {
-            // Se não for 405, relança para ser tratada pelo catch externo
-            throw putErr;
-          }
-        }
+        // EDIÇÃO (PUT)
+        await api.put(`/produtos/${produtoToEdit.id}`, payload);
       } else {
-        // Criação normal
-        await api.post('/produtos', produtoData);
+        // CRIAÇÃO (POST)
+        await api.post('/produtos', payload);
       }
-
-      onSuccess(); // Avisa o componente pai para recarregar a lista
-      onClose(); // Fecha o modal
-    } catch (err: any) {
-      console.error('Erro ao salvar produto:', err);
-      const status = err?.response?.status;
-      if (status === 405) {
-        setFormError('Método não permitido no servidor (405). Verifique o endpoint ou o CORS no backend.');
-      } else if (status === 0 || !status) {
-        setFormError('Erro de conexão com o servidor. Verifique se o backend está rodando.');
-      } else {
-        setFormError('Erro ao salvar produto. Tente novamente.');
-      }
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao salvar produto. Verifique os dados.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEditMode ? 'Editar Produto' : 'Novo Produto'}>
-      <form onSubmit={handleSubmit} className="modal-form">
-
-        <div className="form-group">
-          <label htmlFor="nome">Nome</label>
-          <input type="text" id="nome" name="nome" value={formData.nome} onChange={handleChange} required />
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        
+        {/* Cabeçalho do Modal */}
+        <div className="modal-header" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem'}}>
+          <h2 style={{margin: 0}}>{isEditMode ? 'Editar Produto' : 'Novo Produto'}</h2>
+          <button 
+            type="button" 
+            onClick={onClose}
+            style={{background: 'none', border: 'none', cursor: 'pointer', color: '#64748b'}}
+          >
+            <CloseIcon />
+          </button>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="categoria">Categoria</label>
-          <input 
-            type="text" 
-            id="categoria" 
-            name="categoria" 
-            value={formData.categoria} 
-            onChange={handleChange} 
-            placeholder="Ex: Som, Lanternagem, Insulfilm..."
-          />
-        </div>
-
-        <div className="form-group-row">
-          <div className="form-group">
-            <label htmlFor="precoVenda">Preço (Venda)</label>
-            <input
-              type="number"
-              id="precoVenda"
-              name="precoVenda"
-              value={formData.precoVenda || ''}
-              onChange={handleChange}
-              onFocus={(e) => e.target.select()}
-              placeholder="0.00"
-
+        {/* Formulário com Grid */}
+        <form onSubmit={handleSubmit} className="form-grid">
+          
+          {/* Nome (Largura Total) */}
+          <div className="form-group full-width">
+            <label htmlFor="nome">Nome do Produto</label>
+            <input 
+              id="nome" 
+              name="nome" 
+              value={formData.nome} 
+              onChange={handleChange} 
+              required 
+              placeholder="Ex: Óleo de Motor 5W30"
             />
           </div>
+
+          {/* Categoria (Metade) */}
+          <div className="form-group full-width">
+            <label htmlFor="categoria">Categoria</label>
+            <input 
+              id="categoria" 
+              name="categoria" 
+              value={formData.categoria} 
+              onChange={handleChange} 
+              placeholder="Ex: Lubrificantes"
+            />
+          </div>
+
+          {/* Preço Custo */}
           <div className="form-group">
-            <label htmlFor="precoCusto">Preço (Custo)</label>
+            <label htmlFor="precoCusto">Preço de Custo (R$)</label>
             <input
               type="number"
               id="precoCusto"
               name="precoCusto"
-              value={formData.precoCusto || ''}
+              value={formData.precoCusto}
               onChange={handleChange}
-              onFocus={(e) => e.target.select()}
+              step="0.01"
+              min="0"
               placeholder="0.00"
-
             />
           </div>
-        </div>
 
-        <div className="form-group">
-          <label htmlFor="quantidadeEstoque">Quantidade em Estoque</label>
-          <input
-            type="number"
-            id="quantidadeEstoque"
-            name="quantidadeEstoque"
-            value={formData.quantidadeEstoque || ''}
-            onChange={handleChange}
-            onFocus={(e) => e.target.select()}
-            placeholder="0.00"
-            step="0.01"
-            min="0"
-          />
-        </div>
+          {/* Preço Venda */}
+          <div className="form-group">
+            <label htmlFor="precoVenda">Preço de Venda (R$)</label>
+            <input
+              type="number"
+              id="precoVenda"
+              name="precoVenda"
+              value={formData.precoVenda}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+              required
+              placeholder="0.00"
+            />
+          </div>
 
-        {formError && <div className="error-message">{formError}</div>}
+          {/* Estoque */}
+          <div className="form-group full-width">
+            <label htmlFor="quantidadeEstoque">Quantidade em Estoque</label>
+            <input
+              type="number"
+              id="quantidadeEstoque"
+              name="quantidadeEstoque"
+              value={formData.quantidadeEstoque}
+              onChange={handleChange}
+              step="1" // Se for produto fracionado, mude para 0.01
+              min="0"
+            />
+          </div>
 
-        <div className="modal-actions">
-          <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
-            Cancelar
-          </button>
-          <button type="submit" className="btn-primary" disabled={isSubmitting}>
-            {isSubmitting ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          {/* Rodapé com Botões */}
+          <div className="modal-footer full-width">
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Salvando...' : 'Salvar Produto'}
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
   );
 };
 
