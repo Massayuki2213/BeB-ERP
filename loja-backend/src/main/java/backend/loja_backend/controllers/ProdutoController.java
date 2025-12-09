@@ -50,7 +50,7 @@ public class ProdutoController {
         return ResponseEntity.noContent().build(); 
     } 
 
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     @Operation(summary = "Atualizar produto", description = "Atualiza os dados de um produto existente")
     public ResponseEntity<Produtos> atualizar(@PathVariable Long id, @RequestBody Produtos produto) {
         try {
