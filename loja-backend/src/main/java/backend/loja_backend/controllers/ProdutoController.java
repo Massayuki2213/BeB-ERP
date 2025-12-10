@@ -13,7 +13,6 @@ import backend.loja_backend.entity.Produtos;
 
 import java.util.List;
 
-
 @RestController
 @RequestMapping("/api/produtos")
 @Tag(name = "Produto", description = "API para gerenciamento de Produtos")
@@ -21,13 +20,13 @@ public class ProdutoController {
 
     @Autowired
     private ProdutoService produtoService;
-    
+
     @GetMapping("/{id}")
     @Operation(summary = "Buscar produto por ID", description = "Retorna um produto específico pelo seu ID")
     public ResponseEntity<Produtos> buscarPorId(@PathVariable Long id) {
         return produtoService.buscarPorId(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping
@@ -47,14 +46,16 @@ public class ProdutoController {
     @Operation(summary = "Deletar produto", description = "Remove um produto do banco de dados")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         produtoService.deletar(id);
-        return ResponseEntity.noContent().build(); 
-    } 
+        return ResponseEntity.noContent().build();
+    }
 
+    // Controller (Altere o tipo de Produto para ProdutoDTO)
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar produto", description = "Atualiza os dados de um produto existente")
-    public ResponseEntity<Produtos> atualizar(@PathVariable Long id, @RequestBody Produtos produto) {
+    public ResponseEntity<Produtos> atualizar(@PathVariable Long id, @RequestBody ProdutoDTO produtoDTO) { // <--- AGORA
+                                                                                                           // RECEBE DTO
         try {
-            Produtos produtoAtualizado = produtoService.atualizar(id, produto);
+            Produtos produtoAtualizado = produtoService.atualizar(id, produtoDTO); // <--- Chama o Service com DTO
             return ResponseEntity.ok(produtoAtualizado);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -62,5 +63,3 @@ public class ProdutoController {
     }
 
 }
-    
-  

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ProdutoService {
-   
+
     @Autowired
     private ProdutoRepository produtoRepositorie;
 
@@ -24,7 +24,7 @@ public class ProdutoService {
     public Optional<Produtos> buscarPorId(Long idProduto) {
         return produtoRepositorie.findById(idProduto);
     }
-    
+
     public Produtos salvar(ProdutoDTO produtoDTO) {
         Produtos produto = new Produtos();
         produto.setNome(produtoDTO.getNome());
@@ -35,19 +35,25 @@ public class ProdutoService {
         produto.setCategoria(produtoDTO.getCategoria());
         return produtoRepositorie.save(produto);
     }
-
-    public Produtos atualizar(Long idProduto, Produtos produtoAtualizado) {
+    
+    public Produtos atualizar(Long idProduto, ProdutoDTO produtoDTO) {
         return produtoRepositorie.findById(idProduto)
-            .map(produto -> {
-                produto.setNome(produtoAtualizado.getNome());
-                produto.setDescricao(produtoAtualizado.getDescricao());
-                produto.setPrecoCusto(produtoAtualizado.getPrecoCusto());
-                produto.setPrecoVenda(produtoAtualizado.getPrecoVenda());
-                produto.setQuantidadeEstoque(produtoAtualizado.getQuantidadeEstoque());
-                produto.setCategoria(produtoAtualizado.getCategoria());
-                return produtoRepositorie.save(produto);
-            })
-            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+                .map(produtoExistente -> { // Nomeei como 'produtoExistente' para clareza
+                    // Mapeia os dados do DTO para a entidade existente
+                    produtoExistente.setNome(produtoDTO.getNome());
+                    // produtoExistente.setDescricao(produtoDTO.getDescricao()); // O DTO que você
+                    // me enviou tinha descrição
+                    produtoExistente.setPrecoCusto(produtoDTO.getPrecoCusto());
+                    produtoExistente.setPrecoVenda(produtoDTO.getPrecoVenda());
+
+                    // O campo que você quer atualizar
+                    produtoExistente.setQuantidadeEstoque(produtoDTO.getQuantidadeEstoque());
+
+                    produtoExistente.setCategoria(produtoDTO.getCategoria());
+
+                    return produtoRepositorie.save(produtoExistente);
+                })
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
     }
 
     public void deletar(Long idProduto) {
