@@ -2,10 +2,16 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import type { Produto } from '../types';
-import '../pages/Pages.css'; // Garante que pegue os estilos globais
+import '../pages/Pages.css'; 
 
 // Ícone de Fechar (X)
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+
+// Helper para pegar ID (igual ao do Produtos.tsx)
+const getProductId = (p: any): number | undefined => {
+    if(!p) return undefined;
+    return p.idProduto || p.id;
+};
 
 type ProdutoFormModalProps = {
   isOpen: boolean;
@@ -16,10 +22,11 @@ type ProdutoFormModalProps = {
 
 const initialState = {
   nome: '',
-  precoVenda: '' as string | number, // Usar string no input facilita a digitação
+  precoVenda: '' as string | number, 
   precoCusto: '' as string | number,
   quantidadeEstoque: '' as string | number,
   categoria: '',
+  descricao: '', 
 };
 
 const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: ProdutoFormModalProps) => {
@@ -38,6 +45,7 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
           precoCusto: produtoToEdit.precoCusto,
           quantidadeEstoque: produtoToEdit.quantidadeEstoque || 0,
           categoria: produtoToEdit.categoria || '',
+          descricao: produtoToEdit.descricao || '', 
         });
       } else {
         setFormData(initialState);
@@ -45,7 +53,6 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
     }
   }, [isOpen, produtoToEdit]);
 
-  // Se não estiver aberto, nem renderiza (Evita erros de DOM)
   if (!isOpen) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,18 +64,32 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Converte para números antes de enviar
+    const qtdEstoque = Number(formData.quantidadeEstoque);
+
+    // Payload pronto para o Backend (com valores numéricos seguros)
     const payload = {
-      ...formData,
+      nome: formData.nome,
+      categoria: formData.categoria,
+      descricao: formData.descricao, 
       precoVenda: Number(formData.precoVenda),
       precoCusto: Number(formData.precoCusto),
-      quantidadeEstoque: Number(formData.quantidadeEstoque),
+      quantidadeEstoque: isNaN(qtdEstoque) ? 0 : Math.round(qtdEstoque),
     };
-
+    
     try {
       if (isEditMode && produtoToEdit) {
-        // EDIÇÃO (PUT)
-        await api.put(`/produtos/${produtoToEdit.id}`, payload);
+        // --- CORREÇÃO PRINCIPAL: PEGAR O ID CORRETO ---
+        const idParaEditar = getProductId(produtoToEdit);
+
+        if (!idParaEditar) {
+            alert('Erro Crítico: ID do produto não encontrado. Impossível editar.');
+            setIsSubmitting(false);
+            return;
+        }
+
+        // EDIÇÃO (PUT) com o ID correto na URL
+        await api.put(`/produtos/${idParaEditar}`, payload);
+
       } else {
         // CRIAÇÃO (POST)
         await api.post('/produtos', payload);
@@ -77,7 +98,7 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
       onClose();
     } catch (error) {
       console.error(error);
-      alert('Erro ao salvar produto. Verifique os dados.');
+      alert('Erro ao salvar produto. Verifique o console.');
     } finally {
       setIsSubmitting(false);
     }
@@ -87,7 +108,7 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         
-        {/* Cabeçalho do Modal */}
+        {/* Cabeçalho */}
         <div className="modal-header" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem'}}>
           <h2 style={{margin: 0}}>{isEditMode ? 'Editar Produto' : 'Novo Produto'}</h2>
           <button 
@@ -99,10 +120,9 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
           </button>
         </div>
 
-        {/* Formulário com Grid */}
+        {/* Formulário */}
         <form onSubmit={handleSubmit} className="form-grid">
           
-          {/* Nome (Largura Total) */}
           <div className="form-group full-width">
             <label htmlFor="nome">Nome do Produto</label>
             <input 
@@ -111,11 +131,10 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
               value={formData.nome} 
               onChange={handleChange} 
               required 
-              placeholder="Ex: Óleo de Motor 5W30"
+              placeholder="Ex: Óleo de Motor"
             />
           </div>
 
-          {/* Categoria (Metade) */}
           <div className="form-group full-width">
             <label htmlFor="categoria">Categoria</label>
             <input 
@@ -123,11 +142,10 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
               name="categoria" 
               value={formData.categoria} 
               onChange={handleChange} 
-              placeholder="Ex: Lubrificantes"
+              placeholder="Ex: Peças"
             />
           </div>
 
-          {/* Preço Custo */}
           <div className="form-group">
             <label htmlFor="precoCusto">Preço de Custo (R$)</label>
             <input
@@ -142,7 +160,6 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
             />
           </div>
 
-          {/* Preço Venda */}
           <div className="form-group">
             <label htmlFor="precoVenda">Preço de Venda (R$)</label>
             <input
@@ -158,7 +175,6 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
             />
           </div>
 
-          {/* Estoque */}
           <div className="form-group full-width">
             <label htmlFor="quantidadeEstoque">Quantidade em Estoque</label>
             <input
@@ -167,12 +183,11 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
               name="quantidadeEstoque"
               value={formData.quantidadeEstoque}
               onChange={handleChange}
-              step="1" // Se for produto fracionado, mude para 0.01
+              step="1"
               min="0"
             />
           </div>
 
-          {/* Rodapé com Botões */}
           <div className="modal-footer full-width">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={isSubmitting}>
               Cancelar
