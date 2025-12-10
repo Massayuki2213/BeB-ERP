@@ -15,15 +15,16 @@ const EditIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="non
 const TrashIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
 const PlusIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 
-// Função auxiliar para pegar o ID independente se o back manda 'id' ou 'idProduto'
+// --- FUNÇÃO ROBUSTA PARA PEGAR ID ---
 const getProductId = (p: any): number => {
-  return p.idProduto || p.id || 0;
+  if (!p) return 0;
+  // Tenta pegar id, idProduto, productId ou _id
+  return Number(p.id || p.idProduto || p.productId || p._id || 0);
 };
 
 type SortKey = 'id' | 'nome' | 'precoVenda' | 'quantidadeEstoque';
 
 const Produtos = () => {
-  // --- Estados ---
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -53,6 +54,10 @@ const Produtos = () => {
       setLoading(true);
       const response = await api.get<Produto[]>('/produtos');
       setProdutos(Array.isArray(response.data) ? response.data : []);
+      // LOG DE DEPURAÇÃO (Veja no console se os IDs estão vindo corretos)
+      if (response.data.length > 0) {
+         console.log('Exemplo de produto carregado:', response.data[0]);
+      }
     } catch (err) {
       setError('Erro ao carregar produtos.');
       console.error(err);
@@ -61,11 +66,9 @@ const Produtos = () => {
     }
   };
 
-  // --- Lógica de Filtro/Sort ---
   const filteredAndSortedProducts = useMemo(() => {
     let result = [...produtos];
 
-    // Filtros
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(p => {
@@ -80,12 +83,10 @@ const Produtos = () => {
     if (minQtd) result = result.filter(p => (p.quantidadeEstoque || 0) >= Number(minQtd));
     if (maxQtd) result = result.filter(p => (p.quantidadeEstoque || 0) <= Number(maxQtd));
 
-    // Ordenação
     result.sort((a, b) => {
       let valA: any = a[sortKey as keyof Produto];
       let valB: any = b[sortKey as keyof Produto];
 
-      // Ajuste especial para ID
       if (sortKey === 'id') {
         valA = getProductId(a);
         valB = getProductId(b);
@@ -112,8 +113,9 @@ const Produtos = () => {
   
   const handleOpenEdit = (p: Produto) => { 
     const id = getProductId(p);
+    console.log("Tentando editar ID:", id, "Objeto:", p); // Log para verificação
     if (!id) {
-        alert("Erro: Produto sem ID. Verifique o cadastro.");
+        alert("Erro: O sistema não conseguiu identificar o ID deste produto.");
         return;
     }
     setProdutoToEdit(p); 
@@ -144,8 +146,9 @@ const Produtos = () => {
       await api.delete(`/produtos/${produtoToDelete}`);
       setProdutos(prev => prev.filter(p => getProductId(p) !== produtoToDelete));
       handleCloseModals();
-    } catch {
+    } catch (e) {
       alert('Erro ao excluir.');
+      console.error(e);
     } finally {
       setIsDeleting(false);
     }
@@ -153,7 +156,6 @@ const Produtos = () => {
 
   return (
     <div className="page-container">
-      {/* HEADER */}
       <div className="page-header">
         <div className="page-title">
           <h1>Gerenciar Produtos</h1>
@@ -164,7 +166,6 @@ const Produtos = () => {
         </button>
       </div>
 
-      {/* COMPONENTE DE FILTROS */}
       <ProductFilters 
         search={search} setSearch={setSearch}
         minQtd={minQtd} setMinQtd={setMinQtd}
@@ -202,7 +203,7 @@ const Produtos = () => {
                 filteredAndSortedProducts.map((produto) => {
                   const id = getProductId(produto);
                   return (
-                    <tr key={id}> 
+                    <tr key={id || Math.random()}> 
                         <td>#{id}</td>
                         <td style={{fontWeight: 500}}>{produto.nome}</td>
                         <td>{produto.categoria || '—'}</td>
@@ -236,7 +237,6 @@ const Produtos = () => {
         </div>
       )}
 
-      {/* Modais */}
       <ProdutoFormModal
         isOpen={isFormModalOpen}
         onClose={handleCloseModals}
