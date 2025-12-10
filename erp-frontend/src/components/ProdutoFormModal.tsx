@@ -4,13 +4,12 @@ import api from '../services/api';
 import type { Produto } from '../types';
 import '../pages/Pages.css'; 
 
-// Ícone de Fechar (X)
 const CloseIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 
-// Helper para pegar ID (igual ao do Produtos.tsx)
-const getProductId = (p: any): number | undefined => {
-    if(!p) return undefined;
-    return p.idProduto || p.id;
+// Função Helper segura (Igual à da página principal)
+const getProductId = (p: any): number => {
+    if (!p) return 0;
+    return Number(p.id || p.idProduto || p.productId || 0);
 };
 
 type ProdutoFormModalProps = {
@@ -35,14 +34,13 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
   
   const isEditMode = !!produtoToEdit;
 
-  // Popula o formulário ao abrir
   useEffect(() => {
     if (isOpen) {
       if (produtoToEdit) {
         setFormData({
-          nome: produtoToEdit.nome,
-          precoVenda: produtoToEdit.precoVenda,
-          precoCusto: produtoToEdit.precoCusto,
+          nome: produtoToEdit.nome || '',
+          precoVenda: produtoToEdit.precoVenda || '',
+          precoCusto: produtoToEdit.precoCusto || '',
           quantidadeEstoque: produtoToEdit.quantidadeEstoque || 0,
           categoria: produtoToEdit.categoria || '',
           descricao: produtoToEdit.descricao || '', 
@@ -66,7 +64,6 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
 
     const qtdEstoque = Number(formData.quantidadeEstoque);
 
-    // Payload pronto para o Backend (com valores numéricos seguros)
     const payload = {
       nome: formData.nome,
       categoria: formData.categoria,
@@ -78,17 +75,19 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
     
     try {
       if (isEditMode && produtoToEdit) {
-        // --- CORREÇÃO PRINCIPAL: PEGAR O ID CORRETO ---
+        // --- LOGICA DE EDIÇÃO REFORÇADA ---
         const idParaEditar = getProductId(produtoToEdit);
 
-        if (!idParaEditar) {
-            alert('Erro Crítico: ID do produto não encontrado. Impossível editar.');
-            setIsSubmitting(false);
-            return;
+        console.log("Editando Produto. ID encontrado:", idParaEditar);
+        console.log("URL de destino:", `/produtos/${idParaEditar}`);
+        console.log("Payload:", payload);
+
+        if (!idParaEditar || idParaEditar === 0) {
+            throw new Error("ID do produto inválido ou não encontrado (ID = 0 ou null).");
         }
 
-        // EDIÇÃO (PUT) com o ID correto na URL
-        await api.put(`/produtos/${idParaEditar}`, payload);
+        // Se o erro 405 persistir, verifique se a URL não deve ser outra no seu backend
+        await api.patch(`/produtos/${idParaEditar}`, payload);
 
       } else {
         // CRIAÇÃO (POST)
@@ -96,9 +95,17 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
       }
       onSuccess();
       onClose();
-    } catch (error) {
-      console.error(error);
-      alert('Erro ao salvar produto. Verifique o console.');
+    } catch (error: any) {
+      console.error("Erro no submit:", error);
+      
+      // Feedback melhor para o usuário
+      if (error.response?.status === 405) {
+          alert(`Erro de Sistema (405): O servidor rejeitou a edição na URL "/produtos/${getProductId(produtoToEdit)}". Verifique se o ID está correto.`);
+      } else if (error.message.includes("ID do produto inválido")) {
+          alert("Não foi possível salvar: O ID do produto não foi identificado.");
+      } else {
+          alert('Erro ao salvar produto. Verifique o console.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +115,6 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         
-        {/* Cabeçalho */}
         <div className="modal-header" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem'}}>
           <h2 style={{margin: 0}}>{isEditMode ? 'Editar Produto' : 'Novo Produto'}</h2>
           <button 
@@ -120,7 +126,6 @@ const ProdutoFormModal = ({ isOpen, onClose, onSuccess, produtoToEdit }: Produto
           </button>
         </div>
 
-        {/* Formulário */}
         <form onSubmit={handleSubmit} className="form-grid">
           
           <div className="form-group full-width">
