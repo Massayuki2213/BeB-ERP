@@ -3,491 +3,497 @@ import api from '../services/api';
 import type { Produto, Cliente } from '../types';
 import type { ItemVenda } from '../types';
 import VendaResumoModal, { type VendaResumo } from '../components/VendaResumoModal';
+import {
+  User,
+  Package,
+  Wrench,
+  CreditCard,
+  ShoppingCart,
+  Trash2,
+  Plus,
+  Car,
+  DollarSign,
+  CheckCircle,
+  Search
+} from 'lucide-react';
 import './PDV.css';
 
 // Interface estendida para controle visual no Front-end
 interface ItemVendaLocal extends ItemVenda {
-  isService?: boolean; // Flag para saber se é serviço visualmente
-  tempId?: number;     // ID único para remover do carrinho (timestamp ou id do produto)
+  isService?: boolean; // Flag para saber se é serviço visualmente
+  tempId?: number;     // ID único para remover do carrinho
 }
 
 const PDV = () => {
-  // --- CONFIGURAÇÃO ---
-  const ID_MAO_DE_OBRA = 4; // O ID exato do produto coringa no banco
+  // --- CONFIGURAÇÃO ---
+  const ID_MAO_DE_OBRA = 4;
 
-  // --- Estados de Dados ---
-  const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  
-  // --- Estados de Seleção ---
-  const [produtoSelecionado, setProdutoSelecionado] = useState<number | ''>('');
-  const [clienteSelecionado, setClienteSelecionado] = useState<number | ''>('');
-  const [quantidade, setQuantidade] = useState<number>(1);
-  
-  // --- ESTADOS DO VEÍCULO ---
-  const [veiculoPlaca, setVeiculoPlaca] = useState<string>('');
-  const [veiculoModelo, setVeiculoModelo] = useState<string>('');
-  const [veiculoCor, setVeiculoCor] = useState<string>('');
-  // ---------------------------
-  
-  // --- Estados do Carrinho ---
-  const [itensVenda, setItensVenda] = useState<ItemVendaLocal[]>([]);
-  const [formaPagamento, setFormaPagamento] = useState<string>('DINHEIRO');
-  const [descricao, setDescricao] = useState<string>('');
-  const [loading, setLoading] = useState(false);
+  // --- Estados de Dados ---
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
 
-  // --- Estados Específicos para Adicionar Serviço ---
-  const [servicoNome, setServicoNome] = useState('');
-  const [servicoValor, setServicoValor] = useState('');
+  // --- Estados de Seleção ---
+  const [produtoSelecionado, setProdutoSelecionado] = useState<number | ''>('');
+  const [clienteSelecionado, setClienteSelecionado] = useState<number | ''>('');
+  const [quantidade, setQuantidade] = useState<number>(1);
 
-  // --- Modal ---
-  const [vendaResumo, setVendaResumo] = useState<VendaResumo | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  // --- ESTADOS DO VEÍCULO ---
+  const [veiculoPlaca, setVeiculoPlaca] = useState<string>('');
+  const [veiculoModelo, setVeiculoModelo] = useState<string>('');
+  const [veiculoCor, setVeiculoCor] = useState<string>('');
 
-  useEffect(() => {
-    fetchProdutos();
-    fetchClientes();
-  }, []);
+  // --- Estados do Carrinho ---
+  const [itensVenda, setItensVenda] = useState<ItemVendaLocal[]>([]);
+  const [formaPagamento, setFormaPagamento] = useState<string>('DINHEIRO');
+  const [descricao, setDescricao] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
-  const fetchProdutos = async () => {
-    try {
-      const response = await api.get<Produto[]>('/produtos');
-      setProdutos(response.data);
-    } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
-    }
-  };
+  // --- Estados Serviço ---
+  const [servicoNome, setServicoNome] = useState('');
+  const [servicoValor, setServicoValor] = useState('');
 
-  const fetchClientes = async () => {
-    try {
-      const response = await api.get<Cliente[]>('/clientes');
-      setClientes(response.data);
-    } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
-    }
-  };
+  // --- Modal ---
+  const [vendaResumo, setVendaResumo] = useState<VendaResumo | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // --- Lógica 1: Adicionar Produto de Estoque ---
-  const adicionarItem = () => {
-    if (!produtoSelecionado || quantidade <= 0) {
-      alert('Selecione um produto e quantidade válida');
-      return;
-    }
+  useEffect(() => {
+    fetchProdutos();
+    fetchClientes();
+  }, []);
 
-    const produto = produtos.find(p => p.idProduto === produtoSelecionado);
-    if (!produto) return;
+  const fetchProdutos = async () => {
+    try {
+      const response = await api.get<Produto[]>('/produtos');
+      setProdutos(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error);
+    }
+  };
 
-    // Trava de segurança: Não deixa adicionar o ID 4 por aqui
-    if (produto.idProduto === ID_MAO_DE_OBRA) {
-      alert('⚠️ Atenção: Para adicionar Mão de Obra/Serviços, utilize o painel azul "Adicionar Serviço" logo abaixo.');
-      setProdutoSelecionado('');
-      return;
-    }
+  const fetchClientes = async () => {
+    try {
+      const response = await api.get<Cliente[]>('/clientes');
+      setClientes(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
+    }
+  };
 
-    // Valida Estoque
-    if (produto.quantidadeEstoque !== undefined && produto.quantidadeEstoque < quantidade) {
-      alert(`Estoque insuficiente! Disponível: ${produto.quantidadeEstoque}`);
-      return;
-    }
+  // --- Lógica 1: Adicionar Produto ---
+  const adicionarItem = () => {
+    if (!produtoSelecionado || quantidade <= 0) {
+      alert('Selecione um produto e quantidade válida');
+      return;
+    }
 
-    // Verifica se já existe no carrinho para somar quantidade
-    const itemExistente = itensVenda.find(item => !item.isService && item.produtoId === produtoSelecionado);
+    const produto = produtos.find(p => p.idProduto === produtoSelecionado);
+    if (!produto) return;
 
-    if (itemExistente) {
-      setItensVenda(itensVenda.map(item =>
-        (!item.isService && item.produtoId === produtoSelecionado)
-          ? {
-              ...item,
-              quantidade: item.quantidade + quantidade,
-              precoTotal: (item.quantidade + quantidade) * item.precoUnitario
-            }
-          : item
-      ));
-    } else {
-      const novoItem: ItemVendaLocal = {
-        produtoId: produto.idProduto,
-        nomeProduto: produto.nome,
-        quantidade: quantidade,
-        precoUnitario: produto.precoVenda,
-        precoTotal: produto.precoVenda * quantidade,
-        isService: false,
-        tempId: produto.idProduto // Key única
-      };
-      setItensVenda([...itensVenda, novoItem]);
-    }
+    if (produto.idProduto === ID_MAO_DE_OBRA) {
+      alert('⚠️ Atenção: Para adicionar Mão de Obra/Serviços, utilize o painel "Adicionar Serviço" abaixo.');
+      setProdutoSelecionado('');
+      return;
+    }
 
-    setProdutoSelecionado('');
-    setQuantidade(1);
-  };
+    if (produto.quantidadeEstoque !== undefined && produto.quantidadeEstoque < quantidade) {
+      alert(`Estoque insuficiente! Disponível: ${produto.quantidadeEstoque}`);
+      return;
+    }
 
-  // --- Lógica 2: Adicionar Serviço (ID 4) ---
-  const adicionarServico = () => {
-    if (!servicoNome.trim()) {
-      alert('Digite a descrição do serviço (ex: Instalação, Frete)');
-      return;
-    }
-    
-    const valor = parseFloat(servicoValor.replace(',', '.'));
-    if (!valor || valor <= 0) {
-      alert('Digite um valor válido (ex: 100.00)');
-      return;
-    }
+    const itemExistente = itensVenda.find(item => !item.isService && item.produtoId === produtoSelecionado);
 
-    // Verifica se o produto coringa existe no front carregado
-    const produtoCoringa = produtos.find(p => p.idProduto === ID_MAO_DE_OBRA);
-    if (!produtoCoringa) {
-      alert(`ERRO CRÍTICO: O produto com ID ${ID_MAO_DE_OBRA} (Mão de Obra) não foi encontrado no banco de dados.`);
-      return;
-    }
+    if (itemExistente) {
+      setItensVenda(itensVenda.map(item =>
+        (!item.isService && item.produtoId === produtoSelecionado)
+          ? {
+            ...item,
+            quantidade: item.quantidade + quantidade,
+            precoTotal: (item.quantidade + quantidade) * item.precoUnitario
+          }
+          : item
+      ));
+    } else {
+      const novoItem: ItemVendaLocal = {
+        produtoId: produto.idProduto,
+        nomeProduto: produto.nome,
+        quantidade: quantidade,
+        precoUnitario: produto.precoVenda,
+        precoTotal: produto.precoVenda * quantidade,
+        isService: false,
+        tempId: produto.idProduto
+      };
+      setItensVenda([...itensVenda, novoItem]);
+    }
 
-    const tempId = Date.now(); // Timestamp para gerar ID único visual
+    setProdutoSelecionado('');
+    setQuantidade(1);
+  };
 
-    const novoServico: ItemVendaLocal = {
-      produtoId: ID_MAO_DE_OBRA,  // ID 4
-      nomeProduto: servicoNome,   // Nome customizado
-      quantidade: 1,
-      precoUnitario: valor,       // Preço customizado
-      precoTotal: valor,
-      isService: true,            // Flag visual
-      tempId: tempId
-    };
+  // --- Lógica 2: Adicionar Serviço ---
+  const adicionarServico = () => {
+    if (!servicoNome.trim()) {
+      alert('Digite a descrição do serviço');
+      return;
+    }
 
-    setItensVenda([...itensVenda, novoServico]);
-    
-    // Limpa inputs
-    setServicoNome('');
-    setServicoValor('');
-  };
+    const valor = parseFloat(servicoValor.replace(',', '.'));
+    if (!valor || valor <= 0) {
+      alert('Digite um valor válido');
+      return;
+    }
 
-  const removerItem = (tempIdParaRemover: number) => {
-    setItensVenda(itensVenda.filter(item => item.tempId !== tempIdParaRemover));
-  };
+    const produtoCoringa = produtos.find(p => p.idProduto === ID_MAO_DE_OBRA);
+    if (!produtoCoringa) {
+      alert(`ERRO CRÍTICO: Produto ID ${ID_MAO_DE_OBRA} não encontrado.`);
+      return;
+    }
 
-  const calcularTotal = (): number => {
-    return itensVenda.reduce((total, item) => total + item.precoTotal, 0);
-  };
+    const tempId = Date.now();
 
-  const formatPrice = (price: number) => 
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
+    const novoServico: ItemVendaLocal = {
+      produtoId: ID_MAO_DE_OBRA,
+      nomeProduto: servicoNome,
+      quantidade: 1,
+      precoUnitario: valor,
+      precoTotal: valor,
+      isService: true,
+      tempId: tempId
+    };
 
-  const uploadComprovante = async (orderId: number, htmlContent: string) => {
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const fd = new FormData();
-    const fileName = `comprovante-${orderId}.html`;
-    fd.append('file', blob, fileName);
-    try {
-        await api.post(`/ordens-venda/${orderId}/comprovante`, fd, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-    } catch (e) { console.error('Erro upload comprovante', e)}
-  };
+    setItensVenda([...itensVenda, novoServico]);
+    setServicoNome('');
+    setServicoValor('');
+  };
 
-  const finalizarVenda = async () => {
-    if (!clienteSelecionado) {
-      alert('Selecione um cliente no topo da página');
-      return;
-    }
-    if (itensVenda.length === 0) {
-      alert('O carrinho está vazio');
-      return;
-    }
+  const removerItem = (tempIdParaRemover: number) => {
+    setItensVenda(itensVenda.filter(item => item.tempId !== tempIdParaRemover));
+  };
 
-    // --- LÓGICA DE VEÍCULO: INCLUSÃO NA DESCRIÇÃO ---
-    let finalDescription = descricao || 'Venda PDV';
+  const calcularTotal = (): number => {
+    return itensVenda.reduce((total, item) => total + item.precoTotal, 0);
+  };
 
-    if (veiculoPlaca || veiculoModelo || veiculoCor) {
-        const veiculoInfo = `[VEÍCULO: PLACA=${veiculoPlaca.toUpperCase() || 'N/A'}, MODELO=${veiculoModelo || 'N/A'}, COR=${veiculoCor || 'N/A'}]`;
-        
-        // Adiciona a informação do veículo antes de qualquer outra descrição
-        finalDescription = veiculoInfo + (descricao ? ` | ${descricao}` : '');
-    }
-    // ---------------------------------------------
-    
-    // Mapeamento para o DTO do Backend
-    const payload = {
-      clienteId: clienteSelecionado as number,
-      descricao: finalDescription,
-      valorTotal: calcularTotal(),
-      dataVenda: new Date().toISOString(),
-      formaPagamento: formaPagamento,
-      status: 'FINALIZADA',
-      itensVendas: itensVenda.map(item => ({
-        produtoId: item.produtoId,      // Vai o ID 4 se for serviço
-        nomeItem: item.nomeProduto,     // IMPORTANTE: Envia o nome customizado
-        quantidade: item.quantidade,
-        precoUnitario: item.precoUnitario,
-        precoTotal: item.precoTotal
-      }))
-    };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
 
-    try {
-      setLoading(true);
-      const resp = await api.post('/ordens-venda', payload);
-      const ordemCriada = resp.data || {}; // Ajuste se o retorno for diferente
+  const uploadComprovante = async (orderId: number, htmlContent: string) => {
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const fd = new FormData();
+    const fileName = `comprovante-${orderId}.html`;
+    fd.append('file', blob, fileName);
+    try {
+      await api.post(`/ordens-venda/${orderId}/comprovante`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    } catch (e) { console.error('Erro upload comprovante', e) }
+  };
 
-      // Monta dados para o Modal
-      const resumo: VendaResumo = {
-        id: ordemCriada.id, 
-        cliente: clientes.find(c => c.id === (clienteSelecionado as number)) ?? null,
-        dataVenda: new Date().toISOString(),
-        itens: itensVenda,
-        valorTotal: calcularTotal(),
-        formaPagamento: formaPagamento,
-        descricao: finalDescription, 
-      };
-      
-      setVendaResumo(resumo);
-      setModalOpen(true);
+  const finalizarVenda = async () => {
+    if (!clienteSelecionado) {
+      alert('Selecione um cliente no topo da página');
+      return;
+    }
+    if (itensVenda.length === 0) {
+      alert('O carrinho está vazio');
+      return;
+    }
 
-      // Reset do PDV
-      setItensVenda([]);
-      setClienteSelecionado('');
-      setDescricao('');
-      setFormaPagamento('DINHEIRO');
-      setVeiculoPlaca('');
-      setVeiculoModelo('');
-      setVeiculoCor('');
-      fetchProdutos(); // Atualiza estoque visual
+    let finalDescription = descricao || 'Venda PDV';
 
-    } catch (error: any) {
-      console.error('Erro venda:', error);
-      alert('Erro ao finalizar venda. Verifique o console.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (veiculoPlaca || veiculoModelo || veiculoCor) {
+      const veiculoInfo = `[VEÍCULO: PLACA=${veiculoPlaca.toUpperCase() || 'N/A'}, MODELO=${veiculoModelo || 'N/A'}, COR=${veiculoCor || 'N/A'}]`;
+      finalDescription = veiculoInfo + (descricao ? ` | ${descricao}` : '');
+    }
 
-  // Filtros para renderização visual
-  const listaProdutos = itensVenda.filter(i => !i.isService);
-  const listaServicos = itensVenda.filter(i => i.isService);
+    const payload = {
+      clienteId: clienteSelecionado as number,
+      descricao: finalDescription,
+      valorTotal: calcularTotal(),
+      dataVenda: new Date().toISOString(),
+      formaPagamento: formaPagamento,
+      status: 'FINALIZADA',
+      itensVendas: itensVenda.map(item => ({
+        produtoId: item.produtoId,
+        nomeItem: item.nomeProduto,
+        quantidade: item.quantidade,
+        precoUnitario: item.precoUnitario,
+        precoTotal: item.precoTotal
+      }))
+    };
 
-  return (
-    <div className="page-container">
-      <h1 className="page-title">PDV - Nova Venda</h1>
+    try {
+      setLoading(true);
+      const resp = await api.post('/ordens-venda', payload);
+      const ordemCriada = resp.data || {};
 
-      <div className="pdv-layout">
-        
-        {/* COLUNA ESQUERDA: SELEÇÃO E CADASTRO */}
-        <div className="pdv-selection">
-          
-          {/* 1. CLIENTE */}
-          <div className="card">
-            <h2>👤 Cliente</h2>
-            <select
-              value={clienteSelecionado}
-              onChange={(e) => setClienteSelecionado(Number(e.target.value))}
-              className="select-input"
-            >
-              <option value="">Selecione o Cliente...</option>
-              {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
-          </div>
+      const resumo: VendaResumo = {
+        id: ordemCriada.id,
+        cliente: clientes.find(c => c.id === (clienteSelecionado as number)) ?? null,
+        dataVenda: new Date().toISOString(),
+        itens: itensVenda,
+        valorTotal: calcularTotal(),
+        formaPagamento: formaPagamento,
+        descricao: finalDescription,
+      };
 
-          {/* 1.5. NOVO CARD: INFORMAÇÕES DO VEÍCULO (Opcional) */}
-          <div className="card veiculo-card-info">
-            <h2 style={{color: '#6c757d'}}>🚗 Informações do Veículo (Opcional)</h2>
-            <div className="veiculo-form-col">
-                <label className="input-label">🅿️ Placa</label>
-              <input
-                type="text"
-                placeholder="Ex: AAA0000"
-                className="text-input"
-                value={veiculoPlaca}
-                onChange={e => setVeiculoPlaca(e.target.value.toUpperCase())}
-                maxLength={7}
-              />
+      setVendaResumo(resumo);
+      setModalOpen(true);
 
-              <label className="input-label">🚗 Modelo</label>
-              <input
-                type="text"
-                placeholder="Ex: Fiat Uno"
-                className="text-input"
-                value={veiculoModelo}
-                onChange={e => setVeiculoModelo(e.target.value)}
-              />
+      setItensVenda([]);
+      setClienteSelecionado('');
+      setDescricao('');
+      setFormaPagamento('DINHEIRO');
+      setVeiculoPlaca('');
+      setVeiculoModelo('');
+      setVeiculoCor('');
+      fetchProdutos();
 
-              <label className="input-label">🎨 Cor</label>
-              <input
-                type="text"
-                placeholder="Ex: Prata"
-                className="text-input"
-                value={veiculoCor}
-                onChange={e => setVeiculoCor(e.target.value)}
-              />
-            </div>
-          </div>
+    } catch (error: any) {
+      console.error('Erro venda:', error);
+      alert('Erro ao finalizar venda.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-          {/* 2. PRODUTOS (ESTOQUE) */}
-          <div className="card">
-            <h2>📦 Adicionar Produto</h2>
-            <div className="produto-form">
-              <select
-                value={produtoSelecionado}
-                onChange={(e) => setProdutoSelecionado(Number(e.target.value))}
-                className="select-input"
-              >
-                <option value="">Selecione o Produto...</option>
-                {produtos
-                  .filter(p => p.idProduto !== ID_MAO_DE_OBRA) // Filtra Mão de Obra daqui
-                  .map(p => (
-                    <option key={p.idProduto} value={p.idProduto}>
-                      {p.nome} | {formatPrice(p.precoVenda)} | Est: {p.quantidadeEstoque || 0}
-                    </option>
-                  ))}
-              </select>
-              
-              <div className="quantidade-group">
-                 <input 
-                   type="number" 
-                   min="1" 
-                   value={quantidade} 
-                   onChange={(e)=>setQuantidade(Number(e.target.value))}
-                   className="qtd-input"
-                 />
-                 <button onClick={adicionarItem} className="btn-add">
-                   + Adicionar
-                 </button>
-              </div>
-            </div>
-          </div>
+  const listaProdutos = itensVenda.filter(i => !i.isService);
+  const listaServicos = itensVenda.filter(i => i.isService);
 
-          {/* 3. SERVIÇOS (CUSTOMIZADO) */}
-          <div className="card servico-card">
-            <h2 style={{color: '#0056b3'}}>🛠️ Adicionar Serviço / Mão de Obra</h2>
-            <div className="servico-form-col">
-              <input
-                type="text"
-                placeholder="Tipo de serviço..."
-                className="text-input"
-                value={servicoNome}
-                onChange={e => setServicoNome(e.target.value)}
-              />
-              
-              <div className="servico-actions">
-                <div className="input-wrapper">
-                    <span className="currency-symbol">R$</span>
-                    <input
-                    type="number"
-                    placeholder="0.00"
-                    className="text-input price-input"
-                    value={servicoValor}
-                    onChange={e => setServicoValor(e.target.value)}
-                    />
-                </div>
-                <button onClick={adicionarServico} className="btn-add btn-service">
-                  + Add Serviço
-                </button>
-              </div>
-            </div>
-          </div>
+  return (
+    <div className="pdv-container">
+      <div className="pdv-header">
+        <h1>PDV - Nova Venda</h1>
+      </div>
 
-          {/* 4. PAGAMENTO E OBS */}
-          <div className="card">
-             <h2>💳 Pagamento</h2>
-             <div className="form-group">
-               <select value={formaPagamento} onChange={e=>setFormaPagamento(e.target.value)} className="select-input">
-                 <option value="DINHEIRO">💵 Dinheiro</option>
-                 <option value="PIX">💠 Pix</option>
-                 <option value="CARTAO_CREDITO">💳 Cartão de Crédito</option>
-                 <option value="CARTAO_DEBITO">💳 Cartão de Débito</option>
-               </select>
-             </div>
-             <textarea 
-               placeholder="Observações da venda (opcional)..." 
-               value={descricao} 
-               onChange={e=>setDescricao(e.target.value)} 
-               rows={2} 
-               className="obs-input"
-             />
-          </div>
-        </div>
+      <div className="pdv-layout">
 
-        {/* COLUNA DIREITA: CARRINHO */}
-        <div className="pdv-cart">
-          <div className="card cart-card">
-            <div className="cart-header">
-                <h2>🛒 Itens da Venda</h2>
-                <span className="badge-count">{itensVenda.length} itens</span>
-            </div>
+        {/* COLUNA ESQUERDA */}
+        <div className="pdv-selection">
 
-            {itensVenda.length === 0 ? (
-              <div className="empty-cart">
-                <p>O carrinho está vazio.</p>
-                <small>Adicione produtos ou serviços à esquerda.</small>
-              </div>
-            ) : (
-              <div className="cart-content">
-                <div className="cart-scroll">
-                    {/* LISTA DE PRODUTOS */}
-                    {listaProdutos.length > 0 && (
-                        <div className="cart-section">
-                            <h4 className="section-label">Produtos</h4>
-                            {listaProdutos.map(item => (
-                            <div key={item.tempId} className="cart-item">
-                                <div className="item-info">
-                                <div className="item-name">{item.nomeProduto}</div>
-                                <div className="item-calc">
-                                    {item.quantidade} x {formatPrice(item.precoUnitario)}
-                                </div>
-                                </div>
-                                <div className="item-total">
-                                    {formatPrice(item.precoTotal)}
-                                    <button onClick={() => removerItem(item.tempId!)} className="btn-remove" title="Remover">✕</button>
-                                </div>
-                            </div>
-                            ))}
-                        </div>
-                    )}
+          {/* 1. CLIENTE */}
+          <div className="pdv-card">
+            <h2 className="card-title">
+              <User size={20} /> Cliente
+            </h2>
+            <div className="input-group">
+              <select
+                value={clienteSelecionado}
+                onChange={(e) => setClienteSelecionado(Number(e.target.value))}
+                className="pdv-input"
+              >
+                <option value="">Selecione o Cliente...</option>
+                {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </div>
+          </div>
 
-                    {/* LISTA DE SERVIÇOS */}
-                    {listaServicos.length > 0 && (
-                        <div className="cart-section service-section">
-                            <h4 className="section-label">Serviços</h4>
-                            {listaServicos.map(item => (
-                            <div key={item.tempId} className="cart-item cart-item-service">
-                                <div className="item-info">
-                                <div className="item-name">{item.nomeProduto}</div>
-                                <div className="item-calc">Valor Único</div>
-                                </div>
-                                <div className="item-total">
-                                    {formatPrice(item.precoTotal)}
-                                    <button onClick={() => removerItem(item.tempId!)} className="btn-remove" title="Remover">✕</button>
-                                </div>
-                            </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+          {/* 1.5. VEÍCULO */}
+          <div className="pdv-card">
+            <h2 className="card-title text-muted">
+              <Car size={20} /> Veículo (Opcional)
+            </h2>
+            <div className="veiculo-grid">
+              <div>
+                <label>Placa</label>
+                <input
+                  type="text"
+                  placeholder="AAA-0000"
+                  className="pdv-input"
+                  value={veiculoPlaca}
+                  onChange={e => setVeiculoPlaca(e.target.value.toUpperCase())}
+                  maxLength={8}
+                />
+              </div>
+              <div>
+                <label>Modelo</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Fiat Uno"
+                  className="pdv-input"
+                  value={veiculoModelo}
+                  onChange={e => setVeiculoModelo(e.target.value)}
+                />
+              </div>
+              <div>
+                <label>Cor</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Prata"
+                  className="pdv-input"
+                  value={veiculoCor}
+                  onChange={e => setVeiculoCor(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
 
-                <div className="cart-footer">
-                    <div className="total-row">
-                        <span>Total a Pagar:</span>
-                        <span className="total-value">{formatPrice(calcularTotal())}</span>
-                    </div>
-                    <button 
-                        onClick={finalizarVenda} 
-                        disabled={loading} 
-                        className="btn-finalizar"
-                    >
-                        {loading ? 'Processando...' : '✅ Finalizar Venda'}
-                    </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          {/* 2. PRODUTOS */}
+          <div className="pdv-card">
+            <h2 className="card-title">
+              <Package size={20} /> Adicionar Produto
+            </h2>
+            <div className="produto-row">
+              <div style={{ flex: 1 }}>
+                <select
+                  value={produtoSelecionado}
+                  onChange={(e) => setProdutoSelecionado(Number(e.target.value))}
+                  className="pdv-input"
+                >
+                  <option value="">Selecione o Produto...</option>
+                  {produtos
+                    .filter(p => p.idProduto !== ID_MAO_DE_OBRA)
+                    .map(p => (
+                      <option key={p.idProduto} value={p.idProduto}>
+                        {p.nome} | {formatPrice(p.precoVenda)} | Est: {p.quantidadeEstoque || 0}
+                      </option>
+                    ))}
+                </select>
+              </div>
 
-      <VendaResumoModal
-        open={modalOpen}
-        venda={vendaResumo}
-        onClose={() => { setModalOpen(false); setVendaResumo(null); }}
-        onSaveComprovante={async (html) => {
-           if(vendaResumo?.id) await uploadComprovante(vendaResumo.id, html);
-        }}
-      />
-    </div>
-  );
+              <div className="qtd-wrapper">
+                <input
+                  type="number"
+                  min="1"
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(Number(e.target.value))}
+                  className="pdv-input qtd-input"
+                />
+                <button onClick={adicionarItem} className="btn-add">
+                  <Plus size={18} /> Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. SERVIÇOS */}
+          <div className="pdv-card service-card-border">
+            <h2 className="card-title text-primary">
+              <Wrench size={20} /> Adicionar Serviço
+            </h2>
+            <div className="produto-row">
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  placeholder="Descrição do serviço..."
+                  className="pdv-input"
+                  value={servicoNome}
+                  onChange={e => setServicoNome(e.target.value)}
+                />
+              </div>
+
+              <div className="price-wrapper">
+                <DollarSign size={16} className="currency-icon" />
+                <input
+                  type="number"
+                  placeholder="0.00"
+                  className="pdv-input price-input"
+                  value={servicoValor}
+                  onChange={e => setServicoValor(e.target.value)}
+                />
+                <button onClick={adicionarServico} className="btn-add btn-service">
+                  <Plus size={18} /> Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. PAGAMENTO */}
+          <div className="pdv-card">
+            <h2 className="card-title">
+              <CreditCard size={20} /> Pagamento e Obs
+            </h2>
+            <div className="payment-col">
+              <select value={formaPagamento} onChange={e => setFormaPagamento(e.target.value)} className="pdv-input">
+                <option value="DINHEIRO">Dinheiro</option>
+                <option value="PIX">Pix</option>
+                <option value="CARTAO_CREDITO">Cartão de Crédito</option>
+                <option value="CARTAO_DEBITO">Cartão de Débito</option>
+              </select>
+              <textarea
+                placeholder="Observações adicionais..."
+                value={descricao}
+                onChange={e => setDescricao(e.target.value)}
+                rows={2}
+                className="pdv-input textarea-input"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* COLUNA DIREITA: CARRINHO */}
+        <div className={`pdv-cart-col ${itensVenda.length > 0 ? 'has-items' : ''}`}>
+          <div className="cart-container">
+            {/* No Mobile, este header pode ser um botão de "Abrir Detalhes" */}
+            <div className="cart-header" onClick={() => /* lógica para abrir modal no mobile */ null}>
+              <div className="cart-title-row">
+                <ShoppingCart size={20} />
+                <h2>{window.innerWidth < 768 ? 'Resumo' : 'Itens da Venda'}</h2>
+              </div>
+              <span className="badge-count">{itensVenda.length}</span>
+            </div>
+
+            <div className="cart-body">
+              <div className="cart-body">
+                {itensVenda.length === 0 ? (
+                  <div className="cart-empty">
+                    <ShoppingCart size={48} />
+                    <p>Carrinho vazio</p>
+                  </div>
+                ) : (
+                  <ul className="cart-list">
+                    {itensVenda.map((item) => (
+                      <li key={item.tempId} className={`cart-item ${item.isService ? 'service-item' : ''}`}>
+                        <div className="item-info">
+                          <span className="item-name">{item.nomeProduto}</span>
+                          <span className="item-details">
+                            {item.quantidade}x {formatPrice(item.precoUnitario)}
+                          </span>
+                        </div>
+                        <div className="item-actions">
+                          <span className="item-total">{formatPrice(item.precoTotal)}</span>
+                          <button
+                            onClick={() => removerItem(item.tempId!)}
+                            className="btn-remove"
+                            title="Remover item"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="cart-footer">
+              <div className="total-row">
+                <span>Total</span>
+                <span className="total-amount">{formatPrice(calcularTotal())}</span>
+              </div>
+              <button
+                onClick={finalizarVenda}
+                disabled={loading || itensVenda.length === 0}
+                className="btn-checkout"
+              >
+                {loading ? '...' : <><CheckCircle size={20} /> Finalizar</>}
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <VendaResumoModal
+        open={modalOpen}
+        venda={vendaResumo}
+        onClose={() => { setModalOpen(false); setVendaResumo(null); }}
+        onSaveComprovante={async (html) => {
+          if (vendaResumo?.id) await uploadComprovante(vendaResumo.id, html);
+        }}
+      />
+    </div>
+  );
 };
 
 export default PDV;

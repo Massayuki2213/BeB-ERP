@@ -14,7 +14,7 @@
 }
 
 .dashboard-title {
-  font-size: 32px; /* Ajustado para mobile-first, cresce em telas maiores */
+  font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.5px;
   margin-bottom: 8px;
@@ -76,7 +76,7 @@
   border-radius: 10px;
   outline: none;
   transition: all 0.2s ease;
-  height: 45px; /* Altura fixa para alinhar */
+  height: 45px;
   box-sizing: border-box;
 }
 
@@ -100,7 +100,7 @@
 /* Botão de Filtrar */
 .btn-filter {
   padding: 0 32px;
-  height: 45px; /* Mesma altura dos inputs */
+  height: 45px;
   font-size: 14px;
   font-weight: 500;
   background-color: #1d1d1f;
@@ -146,6 +146,18 @@
   transform: translateY(-2px);
 }
 
+/* --- Ícones KPI (Modificado para Lucide) --- */
+.kpi-icon {
+  margin-bottom: 12px;
+  display: flex; /* Alinha o SVG corretamente */
+  align-items: center;
+}
+
+.kpi-icon svg {
+  stroke-width: 2.5px; /* Deixa o ícone mais grosso e visível */
+  opacity: 0.95;
+}
+
 /* Variantes dos Cards */
 .kpi-card.green-gradient {
   background: linear-gradient(135deg, #34C759 0%, #30D158 100%);
@@ -162,11 +174,7 @@
 .kpi-card.white {
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.03);
-}
-
-.kpi-icon {
-  font-size: 28px;
-  margin-bottom: 12px;
+  color: #1d1d1f; /* IMPORTANTE: Define a cor do ícone e texto para cinza escuro */
 }
 
 .kpi-title {

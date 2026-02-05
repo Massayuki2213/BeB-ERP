@@ -4,7 +4,8 @@ import {
   LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, 
   CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
-import './Dashboard.css'; // Importando o CSS separado
+import { DollarSign, TrendingUp, Package, Users, Filter } from 'lucide-react'; // Importação do Lucide
+import './Dashboard.css';
 
 // Tipagens
 type TotaisResponse = { [forma: string]: number };
@@ -319,6 +320,7 @@ const Dashboard = () => {
           </div>
 
           <button onClick={aplicarFiltroPersonalizado} className="btn-filter">
+            <Filter size={18} style={{ marginRight: 8 }} />
             Filtrar
           </button>
 
@@ -328,7 +330,9 @@ const Dashboard = () => {
       {/* KPIs */}
       <div className="kpi-grid">
         <div className="kpi-card green-gradient">
-          <div className="kpi-icon">💰</div>
+          <div className="kpi-icon">
+             <DollarSign size={32} />
+          </div>
           <div>
             <h3 className="kpi-title">Faturamento</h3>
             <p className="kpi-value">{formatPrice(totalFaturamento)}</p>
@@ -336,7 +340,9 @@ const Dashboard = () => {
         </div>
 
         <div className="kpi-card blue-gradient">
-          <div className="kpi-icon">📈</div>
+          <div className="kpi-icon">
+            <TrendingUp size={32} />
+          </div>
           <div>
             <h3 className="kpi-title">Lucro Estimado</h3>
             <p className="kpi-value">{formatPrice(totalLucro)}</p>
@@ -344,7 +350,9 @@ const Dashboard = () => {
         </div>
 
         <div className="kpi-card white">
-          <div className="kpi-icon">📦</div>
+          <div className="kpi-icon">
+            <Package size={32} />
+          </div>
           <div>
             <h3 className="kpi-title">Produtos</h3>
             <p className="kpi-value">{qtdProdutos}</p>
@@ -352,7 +360,9 @@ const Dashboard = () => {
         </div>
 
         <div className="kpi-card white">
-          <div className="kpi-icon">👥</div>
+          <div className="kpi-icon">
+            <Users size={32} />
+          </div>
           <div>
             <h3 className="kpi-title">Clientes</h3>
             <p className="kpi-value">{qtdClientes}</p>

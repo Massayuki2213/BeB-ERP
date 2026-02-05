@@ -1,15 +1,13 @@
-// loja-backend/src/main/java/backend/loja_backend/services/ProdutoService.java
 package backend.loja_backend.services;
 
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-import backend.loja_backend.repositories.ProdutoRepository;
 import backend.loja_backend.dto.ProdutoDTO;
 import backend.loja_backend.entity.Produtos;
-
-import org.springframework.stereotype.Service;
+import backend.loja_backend.repositories.ProdutoRepository;
 
 @Service
 public class ProdutoService {
@@ -25,31 +23,41 @@ public class ProdutoService {
         return produtoRepositorie.findById(idProduto);
     }
 
-    public Produtos salvar(ProdutoDTO produtoDTO) {
+    // --- SALVAR (CRIAR NOVO) ---
+    public Produtos salvar(ProdutoDTO dto) {
         Produtos produto = new Produtos();
-        produto.setNome(produtoDTO.getNome());
-        produto.setDescricao(produtoDTO.getDescricao());
-        produto.setPrecoCusto(produtoDTO.getPrecoCusto());
-        produto.setPrecoVenda(produtoDTO.getPrecoVenda());
-        produto.setQuantidadeEstoque(produtoDTO.getQuantidadeEstoque());
-        produto.setCategoria(produtoDTO.getCategoria());
+        
+        produto.setNome(dto.getNome());
+        produto.setDescricao(dto.getDescricao());
+        produto.setCategoria(dto.getCategoria());
+        produto.setQuantidadeEstoque(dto.getQuantidadeEstoque());
+        
+        // Mapeando o Código de Barras do DTO para a Entidade
+        produto.setCodigoBarras(dto.getCodigoBarras()); 
+
+        // Preços (Double)
+        produto.setPrecoCusto(dto.getPrecoCusto());
+        produto.setPrecoVenda(dto.getPrecoVenda());
+
         return produtoRepositorie.save(produto);
     }
     
-    public Produtos atualizar(Long idProduto, ProdutoDTO produtoDTO) {
+    // --- ATUALIZAR ---
+    public Produtos atualizar(Long idProduto, ProdutoDTO dto) {
         return produtoRepositorie.findById(idProduto)
-                .map(produtoExistente -> { // Nomeei como 'produtoExistente' para clareza
-                    // Mapeia os dados do DTO para a entidade existente
-                    produtoExistente.setNome(produtoDTO.getNome());
-                    // produtoExistente.setDescricao(produtoDTO.getDescricao()); // O DTO que você
-                    // me enviou tinha descrição
-                    produtoExistente.setPrecoCusto(produtoDTO.getPrecoCusto());
-                    produtoExistente.setPrecoVenda(produtoDTO.getPrecoVenda());
+                .map(produtoExistente -> {
+                    
+                    produtoExistente.setNome(dto.getNome());
+                    produtoExistente.setDescricao(dto.getDescricao());
+                    produtoExistente.setCategoria(dto.getCategoria());
+                    produtoExistente.setQuantidadeEstoque(dto.getQuantidadeEstoque());
+                    
+                    // Atualiza o código de barras caso tenha mudado
+                    produtoExistente.setCodigoBarras(dto.getCodigoBarras());
 
-                    // O campo que você quer atualizar
-                    produtoExistente.setQuantidadeEstoque(produtoDTO.getQuantidadeEstoque());
-
-                    produtoExistente.setCategoria(produtoDTO.getCategoria());
+                    // Atualiza preços
+                    produtoExistente.setPrecoCusto(dto.getPrecoCusto());
+                    produtoExistente.setPrecoVenda(dto.getPrecoVenda());
 
                     return produtoRepositorie.save(produtoExistente);
                 })

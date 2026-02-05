@@ -245,3 +245,68 @@ button {
 /* Animações */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* Fundo Escuro (Overlay) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6); /* Um pouco mais escuro para destaque */
+  display: flex;
+  justify-content: center; /* Centraliza Horizontalmente */
+  align-items: center;     /* Centraliza Verticalmente */
+  z-index: 1000;
+  backdrop-filter: blur(5px); /* Desfoque suave no fundo (efeito moderno) */
+  animation: fadeIn 0.3s ease-out; /* Animação do fundo */
+}
+
+/* A Janela do Modal (Flutuante) */
+.modal-content {
+  background: white;
+  padding: 24px; /* Mais espaço interno */
+  border-radius: 16px; /* Bordas bem arredondadas */
+  width: 90%; /* Em celular ocupa 90% */
+  max-width: 550px; /* Trava a largura máxima para não esticar demais */
+  max-height: 90vh; /* Ocupa no máximo 90% da altura da tela */
+  overflow-y: auto; /* Se o conteúdo for grande, cria barra de rolagem só dentro dele */
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3); /* Sombra forte para dar profundidade */
+  position: relative;
+  
+  /* Animação de entrada (sobe um pouquinho e aparece) */
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Animações Suaves */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(30px) scale(0.95); /* Começa um pouco para baixo e menor */
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1); /* Termina no lugar certo */
+  }
+}
+
+/* Ajuste fino para a barra de rolagem ficar bonita no modal */
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+.modal-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+.modal-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

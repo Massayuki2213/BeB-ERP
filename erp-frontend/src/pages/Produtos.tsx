@@ -1,49 +1,64 @@
-// erp-frontend/src/pages/Produtos.tsx
 import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
-import type { Produto } from '../types';
-import './Pages.css';
-import './ProductSearch.css'; 
+import { 
+  Search, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Package, 
+  ScanBarcode, 
+  Loader2, 
+  X
+} from 'lucide-react';
+import './Pages.css'; 
 
-// Componentes
-import ProductFilters from '../components/ProductFilters';
-import ProdutoFormModal from '../components/ProdutoFormModal';
-import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+// --- TIPAGEM BASEADA NO SEU JAVA ---
+interface Produto {
+  idProduto: number; 
+  nome: string;
+  descricao?: string;
+  precoCusto: number;
+  precoVenda: number;
+  quantidadeEstoque: number; 
+  categoria?: string;
+  codigoBarras?: string; 
+}
 
-// --- ÍCONES ---
-const EditIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
-const TrashIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
-const PlusIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-
-// --- FUNÇÃO ROBUSTA PARA PEGAR ID ---
-const getProductId = (p: any): number => {
-  if (!p) return 0;
-  // Tenta pegar id, idProduto, productId ou _id
-  return Number(p.id || p.idProduto || p.productId || p._id || 0);
-};
-
-type SortKey = 'id' | 'nome' | 'precoVenda' | 'quantidadeEstoque';
+// Interface para o formulário
+interface ProdutoForm {
+    nome: string;
+    descricao: string;
+    precoVenda: number | string;
+    precoCusto: number | string;
+    quantidadeEstoque: number | string;
+    codigoBarras: string;
+    categoria: string;
+}
 
 const Produtos = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-
-  // Filtros
-  const [search, setSearch] = useState('');
-  const [minQtd, setMinQtd] = useState('');
-  const [maxQtd, setMaxQtd] = useState('');
   
-  // Ordenação
-  const [sortKey, setSortKey] = useState<SortKey>('id');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Controle do Modal
+  const [showModal, setShowModal] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  
+  // Loading da busca de EAN
+  const [loadingEan, setLoadingEan] = useState(false);
 
-  // Modais
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [produtoToEdit, setProdutoToEdit] = useState<Produto | null>(null);
-  const [produtoToDelete, setProdutoToDelete] = useState<number | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // Formulário
+  const [formData, setFormData] = useState<ProdutoForm>({
+    nome: '',
+    descricao: '',
+    precoVenda: '',
+    precoCusto: '',
+    quantidadeEstoque: '',
+    codigoBarras: '',
+    categoria: ''
+  });
 
   useEffect(() => {
     fetchProdutos();
@@ -54,201 +69,329 @@ const Produtos = () => {
       setLoading(true);
       const response = await api.get<Produto[]>('/produtos');
       setProdutos(Array.isArray(response.data) ? response.data : []);
-      // LOG DE DEPURAÇÃO (Veja no console se os IDs estão vindo corretos)
-      if (response.data.length > 0) {
-         console.log('Exemplo de produto carregado:', response.data[0]);
-      }
     } catch (err) {
-      setError('Erro ao carregar produtos.');
-      console.error(err);
+      console.error("Erro ao buscar produtos:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredAndSortedProducts = useMemo(() => {
-    let result = [...produtos];
-
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(p => {
-        const id = getProductId(p);
-        return (
-          p.nome.toLowerCase().includes(q) ||
-          String(id).includes(q) ||
-          (p.categoria && p.categoria.toLowerCase().includes(q))
-        );
-      });
-    }
-    if (minQtd) result = result.filter(p => (p.quantidadeEstoque || 0) >= Number(minQtd));
-    if (maxQtd) result = result.filter(p => (p.quantidadeEstoque || 0) <= Number(maxQtd));
-
-    result.sort((a, b) => {
-      let valA: any = a[sortKey as keyof Produto];
-      let valB: any = b[sortKey as keyof Produto];
-
-      if (sortKey === 'id') {
-        valA = getProductId(a);
-        valB = getProductId(b);
-      }
-
-      if ((valA ?? 0) < (valB ?? 0)) return sortOrder === 'asc' ? -1 : 1;
-      if ((valA ?? 0) > (valB ?? 0)) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [produtos, search, minQtd, maxQtd, sortKey, sortOrder]);
-
-  const handleSort = (key: SortKey) => {
-    setSortOrder(prev => (sortKey === key && prev === 'asc') ? 'desc' : 'asc');
-    setSortKey(key);
-  };
-
-  const formatPrice = (price?: number) => 
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price ?? 0);
-
-  // --- Handlers ---
-  const handleOpenCreate = () => { setProdutoToEdit(null); setIsFormModalOpen(true); };
-  
-  const handleOpenEdit = (p: Produto) => { 
-    const id = getProductId(p);
-    console.log("Tentando editar ID:", id, "Objeto:", p); // Log para verificação
-    if (!id) {
-        alert("Erro: O sistema não conseguiu identificar o ID deste produto.");
-        return;
-    }
-    setProdutoToEdit(p); 
-    setIsFormModalOpen(true); 
-  };
-  
-  const handleOpenDelete = (p: Produto) => { 
-    const id = getProductId(p);
-    if(id) {
-        setProdutoToDelete(id); 
-        setIsDeleteModalOpen(true); 
-    }
-  };
-  
-  const handleCloseModals = () => {
-    setIsFormModalOpen(false);
-    setIsDeleteModalOpen(false);
-    setProdutoToEdit(null);
-    setProdutoToDelete(null);
-  };
-
-  const handleFormSuccess = () => { handleCloseModals(); fetchProdutos(); };
-
-  const handleDeleteConfirm = async () => {
-    if (!produtoToDelete) return;
-    setIsDeleting(true);
+  // --- LÓGICA DE BUSCA VIA BACKEND (PROXY) ---
+  const buscarDadosEan = async () => {
+    if (!formData.codigoBarras) return;
+    
+    setLoadingEan(true);
     try {
-      await api.delete(`/produtos/${produtoToDelete}`);
-      setProdutos(prev => prev.filter(p => getProductId(p) !== produtoToDelete));
-      handleCloseModals();
-    } catch (e) {
-      alert('Erro ao excluir.');
-      console.error(e);
+      const response = await api.get(`/consultas/ean/${formData.codigoBarras}`);
+      
+      const data = response.data;
+
+      if (data) {
+        setFormData(prev => ({
+          ...prev,
+          nome: data.description || prev.nome,
+          descricao: data.brand ? `${data.brand.name} - ${data.ncm?.description || ''}` : prev.descricao,
+          categoria: data.gpc?.description || prev.categoria
+        }));
+      }
+    } catch (error) {
+      console.log("Produto não encontrado na base externa ou erro de conexão.");
     } finally {
-      setIsDeleting(false);
+      setLoadingEan(false);
     }
   };
+
+  const handleKeyDownEan = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); 
+      buscarDadosEan();
+    }
+  };
+
+  // --- CRUD ---
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        nome: formData.nome,
+        descricao: formData.descricao,
+        categoria: formData.categoria,
+        precoCusto: Number(formData.precoCusto),
+        precoVenda: Number(formData.precoVenda),
+        quantidadeEstoque: Number(formData.quantidadeEstoque),
+        codigoBarras: formData.codigoBarras 
+      };
+
+      if (editId) {
+        const res = await api.patch(`/produtos/${editId}`, payload);
+        setProdutos(produtos.map(p => p.idProduto === editId ? { ...p, ...res.data } : p));
+      } else {
+        const res = await api.post('/produtos', payload);
+        setProdutos([...produtos, res.data]);
+      }
+      resetModal();
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      alert('Erro ao salvar produto. Verifique se todos os campos estão preenchidos.');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Tem certeza que deseja excluir este produto?')) return;
+    try {
+      await api.delete(`/produtos/${id}`);
+      setProdutos(produtos.filter(p => p.idProduto !== id));
+    } catch { 
+      alert('Erro ao excluir produto.'); 
+    }
+  };
+
+  // --- MODAL CONTROL ---
+  const resetModal = () => {
+    setEditId(null);
+    setFormData({ nome: '', descricao: '', precoVenda: '', precoCusto: '', quantidadeEstoque: '', codigoBarras: '', categoria: '' });
+    setShowModal(false);
+  };
+
+  const handleOpenEdit = (p: Produto) => {
+    setEditId(p.idProduto);
+    setFormData({
+      nome: p.nome,
+      descricao: p.descricao || '',
+      precoVenda: p.precoVenda,
+      precoCusto: p.precoCusto || 0,
+      quantidadeEstoque: p.quantidadeEstoque || 0,
+      categoria: p.categoria || '',
+      codigoBarras: p.codigoBarras || '' 
+    });
+    setShowModal(true);
+  };
+
+  const handleOpenCreate = () => {
+    resetModal();
+    setShowModal(true);
+  };
+
+  const formatPrice = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+  // --- FILTROS ---
+  const filteredProducts = useMemo(() => {
+    const lowerSearch = searchTerm.toLowerCase();
+    return produtos.filter(p => 
+      p.nome.toLowerCase().includes(lowerSearch) || 
+      String(p.idProduto).includes(lowerSearch) ||
+      (p.codigoBarras && p.codigoBarras.includes(lowerSearch))
+    );
+  }, [produtos, searchTerm]);
 
   return (
     <div className="page-container">
+      {/* HEADER */}
       <div className="page-header">
         <div className="page-title">
           <h1>Gerenciar Produtos</h1>
           <p>Visualize e gerencie seu estoque</p>
         </div>
         <button className="btn-primary" onClick={handleOpenCreate}>
-          <PlusIcon /> Novo Produto
+          <Plus size={20} style={{ marginRight: 8 }} /> Novo Produto
         </button>
       </div>
 
-      <ProductFilters 
-        search={search} setSearch={setSearch}
-        minQtd={minQtd} setMinQtd={setMinQtd}
-        maxQtd={maxQtd} setMaxQtd={setMaxQtd}
-      />
+      {/* TOOLBAR */}
+      <div className="toolbar">
+        <div className="search-box">
+          <Search size={18} className="search-icon" />
+          <input 
+            placeholder="Buscar por nome, código ou ID..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
 
-      {loading && <div style={{padding: '2rem', textAlign: 'center'}}>Carregando...</div>}
-      {error && <div style={{color: 'red', padding: '1rem'}}>{error}</div>}
-
-      {!loading && !error && (
-        <div className="table-wrapper"> 
+      {/* TABELA */}
+      <div className="table-wrapper">
+        {loading ? (
+           <div className="loading-state">
+              <Loader2 className="spin" size={24} /> Carregando estoque...
+           </div>
+        ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th onClick={() => handleSort('id')} style={{cursor: 'pointer'}}>
-                  ID {sortKey === 'id' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th onClick={() => handleSort('nome')} style={{cursor: 'pointer'}}>
-                  Nome {sortKey === 'nome' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
+                <th style={{width: '60px'}}>ID</th>
+                <th>Produto</th>
                 <th>Categoria</th>
-                <th onClick={() => handleSort('precoVenda')} style={{cursor: 'pointer'}}>
-                  Preço {sortKey === 'precoVenda' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th onClick={() => handleSort('quantidadeEstoque')} style={{cursor: 'pointer'}}>
-                  Estoque {sortKey === 'quantidadeEstoque' && (sortOrder === 'asc' ? '↑' : '↓')}
-                </th>
-                <th className="col-actions">Ações</th> 
+                <th>Estoque</th>
+                <th>Preço Venda</th>
+                <th className="col-actions">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filteredAndSortedProducts.length === 0 ? (
-                <tr><td colSpan={6} style={{textAlign: 'center', padding: '2rem'}}>Nenhum produto encontrado.</td></tr>
-              ) : (
-                filteredAndSortedProducts.map((produto) => {
-                  const id = getProductId(produto);
-                  return (
-                    <tr key={id || Math.random()}> 
-                        <td>#{id}</td>
-                        <td style={{fontWeight: 500}}>{produto.nome}</td>
-                        <td>{produto.categoria || '—'}</td>
-                        <td>{formatPrice(produto.precoVenda)}</td>
-                        <td>
+              {filteredProducts.length === 0 ? (
+                <tr>
+                   <td colSpan={6} className="empty-state">
+                      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'}}>
+                         <Package size={40} opacity={0.3} />
+                         Nenhum produto encontrado.
+                      </div>
+                   </td>
+                </tr>
+              ) : filteredProducts.map((produto) => (
+                  <tr key={produto.idProduto}>
+                    <td><span style={{color: '#64748b', fontSize: '0.85rem'}}>#{produto.idProduto}</span></td>
+                    <td>
+                        <div style={{fontWeight: 600, color: '#1e293b'}}>{produto.nome}</div>
+                        <div style={{fontSize: '0.75rem', color: '#64748b'}}>{produto.descricao}</div>
+                    </td>
+                    <td>
+                        <span style={{background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', fontSize: '0.85rem', color: '#475569'}}>
+                            {produto.categoria || 'Geral'}
+                        </span>
+                    </td>
+                    <td>
                         <span style={{
-                            color: (produto.quantidadeEstoque || 0) < 5 ? '#ef4444' : '#10b981', 
+                            color: (produto.quantidadeEstoque || 0) < 5 ? '#ef4444' : '#10b981',
                             fontWeight: 600,
                             background: (produto.quantidadeEstoque || 0) < 5 ? '#fef2f2' : '#ecfdf5',
                             padding: '4px 8px',
-                            borderRadius: '4px',
+                            borderRadius: '6px',
                             fontSize: '0.85rem'
                         }}>
-                            {produto.quantidadeEstoque || 0} un
+                            {produto.quantidadeEstoque} un
                         </span>
-                        </td>
-                        <td className="col-actions">
-                        <button className="btn-icon" onClick={() => handleOpenEdit(produto)} title="Editar">
-                            <EditIcon />
-                        </button>
-                        <button className="btn-icon delete" onClick={() => handleOpenDelete(produto)} title="Excluir">
-                            <TrashIcon />
-                        </button>
-                        </td>
-                    </tr>
-                  );
-                })
-              )}
+                    </td>
+                    <td style={{fontWeight: 600}}>{formatPrice(produto.precoVenda)}</td>
+                    <td className="col-actions">
+                      <button className="btn-icon" onClick={() => handleOpenEdit(produto)} title="Editar">
+                         <Edit size={18} />
+                      </button>
+                      <button className="btn-icon delete" onClick={() => handleDelete(produto.idProduto)} title="Excluir">
+                         <Trash2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="modal-overlay" onClick={resetModal}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            
+            {/* CABEÇALHO DO MODAL (Corrigido o botão X) */}
+            <div className="modal-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
+               <h2 style={{margin: 0, fontSize: '1.25rem', color: '#1e293b'}}>{editId ? 'Editar Produto' : 'Novo Produto'}</h2>
+               <button 
+                onClick={resetModal}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748b',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+               >
+                 <X size={24} />
+               </button>
+            </div>
+            
+            <form onSubmit={handleSave} className="form-grid">
+              
+              {/* CÓDIGO DE BARRAS */}
+              <div className="form-group full-width" style={{background: '#eff6ff', padding: '16px', borderRadius: '8px', border: '1px solid #dbeafe'}}>
+                 <label style={{color: '#2563eb', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '0.9rem'}}>
+                    <ScanBarcode size={18} /> Código de Barras / EAN
+                 </label>
+                 
+                 <div style={{display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'stretch'}}>
+                    <input 
+                        value={formData.codigoBarras} 
+                        onChange={e => setFormData({...formData, codigoBarras: e.target.value})}
+                        onKeyDown={handleKeyDownEan}
+                        placeholder="Bipe o produto aqui e dê Enter..."
+                        className="modal-input"
+                        autoFocus={!editId} 
+                        style={{flex: 1}}
+                    />
+                    
+                    {/* BOTÃO DA LUPA (Corrigido a centralização) */}
+                    <button 
+                      type="button" 
+                      onClick={buscarDadosEan} 
+                      disabled={loadingEan} 
+                      style={{
+                        minWidth: '46px',
+                        padding: '0',
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center',
+                        background: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                        {loadingEan ? <Loader2 size={20} className="spin" /> : <Search size={20} />}
+                    </button>
+                 </div>
+                 
+                 <small style={{color: '#64748b', fontSize: '12px', marginTop: '6px', display: 'block', lineHeight: '1.4'}}>
+                    * Ao bipar ou clicar na lupa, buscaremos os dados na internet. Se não achar, preencha manualmente.
+                 </small>
+              </div>
+
+              <div className="form-group full-width">
+                <label>Nome do Produto</label>
+                <input required className="modal-input" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} />
+              </div>
+
+              <div className="form-group full-width">
+                <label>Descrição</label>
+                <input className="modal-input" value={formData.descricao} onChange={e => setFormData({...formData, descricao: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                 <label>Categoria</label>
+                 <input className="modal-input" value={formData.categoria} onChange={e => setFormData({...formData, categoria: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                 <label>Estoque Atual</label>
+                 <input type="number" className="modal-input" value={formData.quantidadeEstoque} onChange={e => setFormData({...formData, quantidadeEstoque: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                <label>Preço Custo (R$)</label>
+                <input type="number" step="0.01" className="modal-input" value={formData.precoCusto} onChange={e => setFormData({...formData, precoCusto: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                <label>Preço Venda (R$)</label>
+                <input type="number" step="0.01" required className="modal-input" value={formData.precoVenda} onChange={e => setFormData({...formData, precoVenda: e.target.value})} />
+              </div>
+
+              <div className="modal-footer full-width">
+                <button type="button" className="btn-secondary" onClick={resetModal}>Cancelar</button>
+                <button type="submit" className="btn-primary">
+                    {editId ? 'Salvar Alterações' : 'Cadastrar Produto'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
-
-      <ProdutoFormModal
-        isOpen={isFormModalOpen}
-        onClose={handleCloseModals}
-        onSuccess={handleFormSuccess}
-        produtoToEdit={produtoToEdit}
-      />
-      <ConfirmDeleteModal
-        isOpen={isDeleteModalOpen}
-        onClose={handleCloseModals}
-        onConfirm={handleDeleteConfirm}
-        isLoading={isDeleting}
-      />
     </div>
   );
 };

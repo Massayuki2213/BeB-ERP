@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import type { Cliente } from '../types';
+// Importe os ícones do pacote que instalamos
+import { Search, Plus, Edit, Trash2, X } from 'lucide-react';
 import './Pages.css';
 
-// --- Ícones Isolados (Para limpar o código principal) ---
-const SearchIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>;
-const PlusIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-const EditIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
-const TrashIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+// Interface (se não tiver no arquivo types, mantenha aqui ou mova para types.ts)
+interface Cliente {
+  id: number;
+  nome: string;
+  email?: string;
+  telefone?: string;
+  cpfCnpj?: string;
+  endereco?: string;
+}
 
 const Clientes = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -28,7 +33,7 @@ const Clientes = () => {
       setClientes(response.data);
     } catch (err) {
       console.error(err);
-      alert('Erro ao carregar sistema');
+      alert('Erro ao carregar clientes');
     } finally {
       setLoading(false);
     }
@@ -66,13 +71,19 @@ const Clientes = () => {
 
   const handleEdit = (c: Cliente) => {
     setEditId(c.id);
-    setNovoCliente({ ...c, telefone: c.telefone || '', email: c.email || '', endereco: c.endereco || '', cpfCnpj: c.cpfCnpj || '' });
+    setNovoCliente({ 
+      nome: c.nome, 
+      telefone: c.telefone || '', 
+      email: c.email || '', 
+      endereco: c.endereco || '', 
+      cpfCnpj: c.cpfCnpj || '' 
+    });
     setShowModal(true);
   };
 
   const filtered = clientes.filter(c => 
     c.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.cpfCnpj?.includes(searchTerm)
+    (c.cpfCnpj && c.cpfCnpj.includes(searchTerm))
   );
 
   return (
@@ -84,14 +95,14 @@ const Clientes = () => {
           <p>Gerencie sua base de contatos</p>
         </div>
         <button className="btn-primary" onClick={() => { resetModal(); setShowModal(true); }}>
-          <PlusIcon /> Novo Cliente
+          <Plus size={20} style={{ marginRight: 8 }} /> Novo Cliente
         </button>
       </div>
 
-      {/* Barra de Ferramentas (Busca) */}
+      {/* Barra de Busca */}
       <div className="toolbar">
         <div className="search-box">
-          <SearchIcon />
+          <Search size={18} className="search-icon" />
           <input 
             placeholder="Buscar por nome ou CPF..." 
             value={searchTerm}
@@ -102,7 +113,7 @@ const Clientes = () => {
 
       {/* Tabela */}
       <div className="table-wrapper">
-        {loading ? <div style={{padding: '2rem', textAlign: 'center'}}>Carregando...</div> : (
+        {loading ? <div className="loading-state">Carregando...</div> : (
           <table className="data-table">
             <thead>
               <tr>
@@ -110,12 +121,12 @@ const Clientes = () => {
                 <th>Email</th>
                 <th>Telefone</th>
                 <th>CPF/CNPJ</th>
-                <th className="col-actions">Ações</th> {/* Classe específica para alinhar */}
+                <th className="col-actions">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={5} style={{textAlign: 'center', padding: '2rem'}}>Nenhum cliente encontrado.</td></tr>
+                <tr><td colSpan={5} className="empty-state">Nenhum cliente encontrado.</td></tr>
               ) : filtered.map((cliente) => (
                 <tr key={cliente.id}>
                   <td><strong>{cliente.nome}</strong></td>
@@ -123,8 +134,12 @@ const Clientes = () => {
                   <td>{cliente.telefone || '-'}</td>
                   <td>{cliente.cpfCnpj || '-'}</td>
                   <td className="col-actions">
-                    <button className="btn-icon" onClick={() => handleEdit(cliente)} title="Editar"><EditIcon /></button>
-                    <button className="btn-icon delete" onClick={() => handleDelete(cliente.id)} title="Excluir"><TrashIcon /></button>
+                    <button className="btn-icon" onClick={() => handleEdit(cliente)} title="Editar">
+                      <Edit size={18} />
+                    </button>
+                    <button className="btn-icon delete" onClick={() => handleDelete(cliente.id)} title="Excluir">
+                      <Trash2 size={18} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -137,7 +152,10 @@ const Clientes = () => {
       {showModal && (
         <div className="modal-overlay" onClick={resetModal}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 style={{margin: 0}}>{editId ? 'Editar Cliente' : 'Novo Cliente'}</h2>
+            <div className="modal-header">
+              <h2>{editId ? 'Editar Cliente' : 'Novo Cliente'}</h2>
+              <button className="btn-close" onClick={resetModal}><X size={20} /></button>
+            </div>
             
             <form onSubmit={handleSave} className="form-grid">
               <div className="form-group full-width">

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import VendaResumoModal from "../components/VendaResumoModal";
 import type { Cliente } from "../types";
-import "./NotasHistorico.css"; 
+import { Search, Eye, Trash2, AlertCircle } from "lucide-react"; // Novos ícones
+import "./Pages.css"; // Usa o CSS padrão agora
 
 // --- IMPORTANTE: MESMA CONSTANTE DO PDV ---
 const ID_MAO_DE_OBRA = 4; 
@@ -102,37 +103,37 @@ const NotasHistorico = () => {
     }
   };
 
+  const filteredData = filtrar();
+
   return (
     <div className="page-container">
+      {/* Header */}
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Histórico de Vendas</h1>
-          <p style={{color: '#666', marginTop: '4px', fontSize: '0.9rem'}}>
-            Consulte e gerencie todas as vendas realizadas.
-          </p>
+        <div className="page-title">
+          <h1>Histórico de Vendas</h1>
+          <p>Consulte e gerencie todas as vendas realizadas</p>
         </div>
+        {/* Espaço para botão extra se precisar no futuro */}
       </div>
       
-      <div className="search-card">
-        <input 
-          className="search-input"
-          value={busca}
-          onChange={e => setBusca(e.target.value)}
-          placeholder="🔍 Buscar por cliente, ID ou tipo..."
-        />
+      {/* Toolbar / Search */}
+      <div className="toolbar">
+        <div className="search-box">
+          <Search size={18} style={{ color: '#64748b' }} />
+          <input 
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="Buscar por cliente, ID ou tipo..."
+          />
+        </div>
       </div>
 
-      <div className="table-card">
-        {loading && <div style={{padding: '40px', textAlign: 'center', color: '#666'}}>Carregando histórico...</div>}
-        
-        {!loading && notas.length === 0 && (
-          <div style={{padding: '40px', textAlign: 'center', color: '#888'}}>
-            Nenhuma venda encontrada.
-          </div>
-        )}
-
-        {!loading && notas.length > 0 && (
-          <table className="historico-table">
+      {/* Tabela */}
+      <div className="table-wrapper">
+        {loading ? (
+          <div style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>Carregando histórico...</div>
+        ) : (
+          <table className="data-table">
             <thead>
               <tr>
                 <th style={{width: '80px'}}>ID</th>
@@ -140,36 +141,54 @@ const NotasHistorico = () => {
                 <th>Data / Hora</th>
                 <th>Forma Pagto</th>
                 <th>Valor Total</th>
-                <th style={{width: '100px'}}>Ações</th>
+                <th className="col-actions">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filtrar().map(nota => (
-                <tr key={nota.id}>
-                  <td className="col-id">#{nota.id}</td>
-                  <td style={{fontWeight: 500}}>{getNomeCliente(nota.clienteId)}</td>
-                  <td style={{color: '#555'}}>{formatDateTime(nota.dataNota)}</td>
-                  <td>
-                    <span className="badge-tipo">{nota.tipo.toLowerCase()}</span>
+              {filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>
+                     <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'}}>
+                        <AlertCircle size={32} opacity={0.5} />
+                        Nenhuma venda encontrada.
+                     </div>
                   </td>
-                  <td className="col-valor">{formatPrice(nota.valor)}</td>
+                </tr>
+              ) : filteredData.map(nota => (
+                <tr key={nota.id}>
+                  <td><strong>#{nota.id}</strong></td>
+                  <td>{getNomeCliente(nota.clienteId)}</td>
+                  <td style={{color: '#64748b'}}>{formatDateTime(nota.dataNota)}</td>
                   <td>
-                      <div className="actions-cell">
-                        <button 
-                          className="btn-icon btn-view" 
-                          onClick={() => { setNotaSelecionada(nota); setModalOpen(true); }}
-                          title="Ver Detalhes"
-                        >
-                          👁️
-                        </button>
-                        <button 
-                          className="btn-icon btn-delete" 
-                          onClick={() => apagarVenda(nota.id)}
-                          title="Excluir Registro"
-                        >
-                          🗑️
-                        </button>
-                      </div>
+                    {/* Badge simples inline para manter o visual clean */}
+                    <span style={{
+                        textTransform: 'capitalize', 
+                        fontSize: '0.85rem',
+                        padding: '4px 8px',
+                        background: '#f1f5f9',
+                        borderRadius: '4px',
+                        fontWeight: 500,
+                        color: '#475569'
+                    }}>
+                        {nota.tipo.toLowerCase()}
+                    </span>
+                  </td>
+                  <td style={{fontWeight: 600, color: '#059669'}}>{formatPrice(nota.valor)}</td>
+                  <td className="col-actions">
+                      <button 
+                        className="btn-icon" 
+                        onClick={() => { setNotaSelecionada(nota); setModalOpen(true); }}
+                        title="Ver Detalhes"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button 
+                        className="btn-icon delete" 
+                        onClick={() => apagarVenda(nota.id)}
+                        title="Excluir Registro"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                   </td>
                 </tr>
               ))}
@@ -178,6 +197,7 @@ const NotasHistorico = () => {
         )}
       </div>
 
+      {/* Modal */}
       {notaSelecionada && (
         <VendaResumoModal
             open={modalOpen}
