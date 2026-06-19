@@ -1,100 +1,73 @@
 // src/pages/Dashboard.tsx
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Wallet, Package, Wrench, TrendingUp, TrendingDown, ClipboardList, Calendar, RefreshCw,
+} from 'lucide-react';
 import api from '../services/api';
+import type {
+  ResumoFinanceiro, FluxoCaixaDia, LancamentoFinanceiro, OrdemServico, Agendamento,
+} from '../types';
 import './Pages.css';
 
-type TotaisResponse = { [forma: string]: number };
+const formatPrice = (v?: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v ?? 0);
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const isoDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const inicioMes = () => { const d = new Date(); return isoDate(new Date(d.getFullYear(), d.getMonth(), 1)); };
+const fimMes = () => { const d = new Date(); return isoDate(new Date(d.getFullYear(), d.getMonth() + 1, 0)); };
+const ddMM = (iso: string) => iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '';
 
 const Dashboard = () => {
-  const [qtdProdutos, setQtdProdutos] = useState<number>(0);
-  const [qtdClientes, setQtdClientes] = useState<number>(0);
-  const [qtdServicos, setQtdServicos] = useState<number>(0);
-  const [totalDinheiro, setTotalDinheiro] = useState<number>(0);
-  const [totalPix, setTotalPix] = useState<number>(0);
-  const [totalGeral, setTotalGeral] = useState<number>(0);
+  const [resumo, setResumo] = useState<ResumoFinanceiro | null>(null);
+  const [fluxo, setFluxo] = useState<FluxoCaixaDia[]>([]);
+  const [aReceber, setAReceber] = useState<LancamentoFinanceiro[]>([]);
+  const [aPagar, setAPagar] = useState<LancamentoFinanceiro[]>([]);
+  const [ordens, setOrdens] = useState<OrdemServico[]>([]);
+  const [agendaHoje, setAgendaHoje] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    carregarDashboard();
+    carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const formatPrice = (v: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
-
-  const getMonthRange = () => {
-    const start = new Date();
-    start.setDate(1);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-    // backend espera "yyyy-MM-ddTHH:mm:ss" (sem Z)
-    const fmt = (d: Date) => d.toISOString().slice(0, 19);
-    return { start: fmt(start), end: fmt(end) };
-  };
-
-  const carregarDashboard = async () => {
+  const carregar = async () => {
     setLoading(true);
     setErro(null);
+    const inicio = inicioMes(), fim = fimMes(), hoje = isoDate(new Date());
     try {
-      // 1) buscar contagens simples
-      const [prodRes, cliRes, servRes] = await Promise.all([
-        api.get('/produtos'),
-        api.get('/clientes'),
-        api.get('/servicos'),
+      const [r, f, ar, ap, os, ag] = await Promise.all([
+        api.get<ResumoFinanceiro>('/financeiro/resumo', { params: { inicio, fim } }),
+        api.get<FluxoCaixaDia[]>('/financeiro/fluxo-caixa', { params: { inicio, fim } }),
+        api.get<LancamentoFinanceiro[]>('/financeiro/contas-a-receber'),
+        api.get<LancamentoFinanceiro[]>('/financeiro/contas-a-pagar'),
+        api.get<OrdemServico[]>('/ordens-servico'),
+        api.get<Agendamento[]>('/agendamentos/periodo', { params: { inicio: `${hoje}T00:00:00`, fim: `${hoje}T23:59:59` } }),
       ]);
-      setQtdProdutos(Array.isArray(prodRes.data) ? prodRes.data.length : 0);
-      setQtdClientes(Array.isArray(cliRes.data) ? cliRes.data.length : 0);
-      setQtdServicos(Array.isArray(servRes.data) ? servRes.data.length : 0);
-
-      // 2) buscar faturamento - preferir endpoint específico se existir
-      const { start, end } = getMonthRange();
-
-      // TENTATIVA A: endpoint resumido no backend (recomendado)
-      try {
-        const totalsResp = await api.get<TotaisResponse>(`/dashboard/totais?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
-        const data = totalsResp.data || {};
-        const din = Number(data.DINHEIRO || data.dinheiro || 0);
-        const pix = Number(data.PIX || data.pix || 0);
-        setTotalDinheiro(din);
-        setTotalPix(pix);
-        setTotalGeral(din + pix);
-      } catch (err) {
-        // Se endpoint /dashboard/totais não existir, caimos no fallback (opção B)
-        console.warn('Endpoint /dashboard/totais indisponível — usando fallback por ordens-venda', err);
-        await carregarFaturamentoPorOrdens(start, end);
-      }
-    } catch (err: any) {
+      setResumo(r.data);
+      setFluxo(f.data);
+      setAReceber(ar.data);
+      setAPagar(ap.data);
+      setOrdens(os.data);
+      setAgendaHoje(ag.data);
+    } catch (err) {
       console.error(err);
-      setErro('Erro ao carregar dashboard. Veja console para detalhes.');
+      setErro('Erro ao carregar o dashboard. Verifique se o backend está rodando.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Fallback: pega ordens e agrupa no frontend
-  const carregarFaturamentoPorOrdens = async (start: string, end: string) => {
-    try {
-      const resp = await api.get<any[]>(`/ordens-venda?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
-      const ordens = Array.isArray(resp.data) ? resp.data : [];
-      // filtrar apenas finalizadas
-      const finalizadas = ordens.filter(o => o.status === 'FINALIZADA' || o.status === 'FINALIZADO');
-      const din = finalizadas
-        .filter(o => (o.formaPagamento || '').toUpperCase() === 'DINHEIRO')
-        .reduce((s, o) => s + Number(o.valorTotal || 0), 0);
-      const pix = finalizadas
-        .filter(o => (o.formaPagamento || '').toUpperCase() === 'PIX')
-        .reduce((s, o) => s + Number(o.valorTotal || 0), 0);
-
-      setTotalDinheiro(din);
-      setTotalPix(pix);
-      setTotalGeral(din + pix);
-    } catch (err) {
-      console.error('Erro ao carregar ordens para faturamento:', err);
-      setErro('Erro ao calcular faturamento a partir das ordens.');
-    }
-  };
+  const soma = (ls: LancamentoFinanceiro[]) => ls.reduce((s, l) => s + Number(l.valor || 0), 0);
+  const osAbertas = ordens.filter(o => o.status !== 'FINALIZADA' && o.status !== 'CANCELADA');
+  const osFinalizadas = ordens
+    .filter(o => o.status === 'FINALIZADA')
+    .sort((a, b) => (b.dataFechamento || '').localeCompare(a.dataFechamento || ''))
+    .slice(0, 8);
+  const maxFluxo = Math.max(1, ...fluxo.map(d => Math.max(d.entradas, d.saidas)));
 
   if (loading) {
     return (
@@ -107,53 +80,132 @@ const Dashboard = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Dashboard</h1>
+      <div className="page-header">
+        <h1 className="page-title">Dashboard</h1>
+        <button className="btn-primary" onClick={carregar}><RefreshCw size={16} />Atualizar</button>
+      </div>
 
-      {erro && <div style={{ color: 'red', marginBottom: 12 }}>{erro}</div>}
+      {erro && <div className="error-message">{erro}</div>}
 
+      {/* KPIs financeiros (mês) */}
       <div className="dashboard-grid">
         <div className="dashboard-card">
-          <div className="card-icon">📦</div>
+          <div className="card-icon"><Wallet size={22} /></div>
           <div className="card-content">
-            <h3>Produtos</h3>
-            <p className="card-value">{qtdProdutos}</p>
-            <p className="card-label">Total em Estoque</p>
+            <h3>Saldo do Mês</h3>
+            <p className="card-value">{formatPrice(resumo?.saldo)}</p>
+            <p className="card-label">Entradas {formatPrice(resumo?.totalEntradas)} • Saídas {formatPrice(resumo?.totalSaidas)}</p>
           </div>
         </div>
-
         <div className="dashboard-card">
-          <div className="card-icon">👥</div>
+          <div className="card-icon"><Package size={22} /></div>
           <div className="card-content">
-            <h3>Clientes</h3>
-            <p className="card-value">{qtdClientes}</p>
-            <p className="card-label">Clientes Cadastrados</p>
+            <h3>Lucro Peças</h3>
+            <p className="card-value">{formatPrice(resumo?.lucroPecas)}</p>
+            <p className="card-label">Receita {formatPrice(resumo?.receitaPecas)}</p>
           </div>
         </div>
-
         <div className="dashboard-card">
-          <div className="card-icon">🔧</div>
+          <div className="card-icon"><Wrench size={22} /></div>
           <div className="card-content">
-            <h3>Serviços</h3>
-            <p className="card-value">{qtdServicos}</p>
-            <p className="card-label">Serviços Disponíveis</p>
+            <h3>Lucro Serviços</h3>
+            <p className="card-value">{formatPrice(resumo?.lucroServicos)}</p>
+            <p className="card-label">Receita {formatPrice(resumo?.receitaServicos)}</p>
           </div>
         </div>
-
         <div className="dashboard-card">
-          <div className="card-icon">💰</div>
+          <div className="card-icon"><TrendingUp size={22} /></div>
           <div className="card-content">
-            <h3>Faturamento (Mês)</h3>
-            <p className="card-value">{formatPrice(totalGeral)}</p>
-            <p className="card-label">Dinheiro: {formatPrice(totalDinheiro)} • PIX: {formatPrice(totalPix)}</p>
+            <h3>A Receber</h3>
+            <p className="card-value">{formatPrice(soma(aReceber))}</p>
+            <p className="card-label">{aReceber.length} em aberto</p>
+          </div>
+        </div>
+        <div className="dashboard-card">
+          <div className="card-icon"><TrendingDown size={22} /></div>
+          <div className="card-content">
+            <h3>A Pagar</h3>
+            <p className="card-value">{formatPrice(soma(aPagar))}</p>
+            <p className="card-label">{aPagar.length} em aberto</p>
           </div>
         </div>
       </div>
 
-      <div className="dashboard-welcome">
-        <h2>Bem-vindo ao Sistema ERP 🎵</h2>
-        <p>Gerencie seus produtos, clientes e serviços de forma eficiente.</p>
-        <div style={{ marginTop: 12 }}>
-          <button onClick={carregarDashboard}>Atualizar</button>
+      {/* KPIs operação */}
+      <div className="dashboard-grid">
+        <div className="dashboard-card">
+          <div className="card-icon"><ClipboardList size={22} /></div>
+          <div className="card-content">
+            <h3>OS em Aberto</h3>
+            <p className="card-value">{osAbertas.length}</p>
+            <p className="card-label"><Link to="/ordens-servico">ver ordens</Link></p>
+          </div>
+        </div>
+        <div className="dashboard-card">
+          <div className="card-icon"><Calendar size={22} /></div>
+          <div className="card-content">
+            <h3>Agenda de Hoje</h3>
+            <p className="card-value">{agendaHoje.length}</p>
+            <p className="card-label"><Link to="/agenda">ver agenda</Link></p>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '1.5rem' }}>
+        {/* Fluxo de caixa diário */}
+        <div>
+          <h2 style={{ fontSize: '1.2rem' }}>Fluxo de Caixa Diário (mês)</h2>
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr><th>Dia</th><th>Entradas</th><th>Saídas</th><th>Saldo</th><th>Movimento</th></tr>
+              </thead>
+              <tbody>
+                {fluxo.length === 0 ? <tr><td colSpan={5}>Sem movimento no período.</td></tr> :
+                  fluxo.map(d => (
+                    <tr key={d.data}>
+                      <td>{ddMM(d.data)}</td>
+                      <td style={{ color: '#16a34a' }}>{formatPrice(d.entradas)}</td>
+                      <td style={{ color: '#dc2626' }}>{formatPrice(d.saidas)}</td>
+                      <td><strong>{formatPrice(d.saldoDia)}</strong></td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 120 }}>
+                          <div style={{ height: 6, borderRadius: 3, background: '#16a34a', width: `${(d.entradas / maxFluxo) * 100}%` }} />
+                          <div style={{ height: 6, borderRadius: 3, background: '#dc2626', width: `${(d.saidas / maxFluxo) * 100}%` }} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Gatilhos de garantia / upgrade */}
+        <div>
+          <h2 style={{ fontSize: '1.2rem' }}>Retorno (garantia / upgrade)</h2>
+          <p style={{ color: '#6b7280', marginTop: 0, fontSize: '0.9rem' }}>
+            Últimas OS finalizadas — clientes para acionar garantia ou oferecer upgrade.
+          </p>
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr><th>OS</th><th>Cliente</th><th>Veículo</th><th>Fechada em</th><th>Total</th></tr>
+              </thead>
+              <tbody>
+                {osFinalizadas.length === 0 ? <tr><td colSpan={5}>Nenhuma OS finalizada ainda.</td></tr> :
+                  osFinalizadas.map(o => (
+                    <tr key={o.id}>
+                      <td>#{o.id}</td>
+                      <td>{o.cliente?.nome || '-'}</td>
+                      <td>{o.veiculo?.placa || '-'}</td>
+                      <td>{o.dataFechamento ? o.dataFechamento.slice(0, 10) : '-'}</td>
+                      <td>{formatPrice(o.valorTotal)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import VendaResumoModal from "../components/VendaResumoModal";
 import type { Cliente } from "../types";
+import { Search, Eye, Trash2 } from "lucide-react";
 import "./NotasHistorico.css";
 
 interface Nota {
@@ -99,20 +100,21 @@ const NotasHistorico = () => {
     }
   };
 
-  const handleSalvarComprovante = async (html: string) => {
+  const handleSalvarComprovante = async (_html: string) => {
     console.log("Salvando comprovante...");
-    return Promise.resolve(); 
+    return Promise.resolve();
   };
 
   return (
     <div className="page-container">
       <h1 className="page-title">Histórico de Vendas</h1>
       
-      <div className="notas-controls">
-        <input 
+      <div className="notas-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <Search size={16} color="#9ca3af" />
+        <input
           value={busca}
           onChange={e => setBusca(e.target.value)}
-          placeholder="🔍 Buscar venda..."
+          placeholder="Buscar venda..."
         />
       </div>
 
@@ -141,8 +143,8 @@ const NotasHistorico = () => {
                   <td>{formatPrice(nota.valor)}</td>
                   <td>{nota.tipo}</td>
                   <td className="acoes">
-                     <button onClick={() => { setNotaSelecionada(nota); setModalOpen(true); }}>👁️</button>
-                     <button onClick={() => apagarVenda(nota.id)} className="btn-delete">🗑️</button>
+                     <button title="Ver" style={{ display: 'inline-flex', alignItems: 'center' }} onClick={() => { setNotaSelecionada(nota); setModalOpen(true); }}><Eye size={16} /></button>
+                     <button title="Excluir" style={{ display: 'inline-flex', alignItems: 'center' }} onClick={() => apagarVenda(nota.id)} className="btn-delete"><Trash2 size={16} /></button>
                   </td>
                 </tr>
               ))}

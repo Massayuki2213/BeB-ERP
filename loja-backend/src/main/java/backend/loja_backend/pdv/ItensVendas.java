@@ -1,0 +1,39 @@
+package backend.loja_backend.pdv;
+
+import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import backend.loja_backend.produto.Produtos;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Data;
+
+@Entity
+@Table(name = "itens_vendas")
+@Data
+public class ItensVendas {
+
+    @Id
+    @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
+    private Long id;
+    // Relacionamento com produtos
+    @ManyToOne
+    @JoinColumn(name = "produto_id", nullable = false)
+    @NotFound(action = NotFoundAction.IGNORE)
+    private Produtos produto;
+    @ManyToOne
+    @JoinColumn(name = "ordem_venda_id", nullable = false)
+    @JsonIgnore
+    private OrdemVenda ordemVenda;
+    // Quantidade decimal (permite venda fracionada, ex.: metros de fio)
+    @Column(precision = 12, scale = 3)
+    private BigDecimal quantidade;
+    private BigDecimal precoUnitario;
+
+}

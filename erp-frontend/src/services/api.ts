@@ -1,8 +1,10 @@
 import axios from 'axios';
 
 // Configuração base do Axios
+// A URL vem da variável de ambiente VITE_API_BASE_URL (definida no .env / build do Docker).
+// Fallback para localhost no dev fora do Docker.
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api',
   headers: {
     'Content-Type': 'application/json',
   },

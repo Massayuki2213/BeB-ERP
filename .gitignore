@@ -1,0 +1,8 @@
+# Variáveis de ambiente (contêm segredos) — nunca versionar
+.env
+!.env.example
+
+# Editores / SO
+.DS_Store
+.vscode/
+.idea/

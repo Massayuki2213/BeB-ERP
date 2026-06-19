@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import type { Cliente } from '../types';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import './Pages.css';
 
 const Clientes = () => {
@@ -70,7 +71,7 @@ const Clientes = () => {
     <div className="page-container">
       <div className="page-header">
         <h1 className="page-title">Clientes</h1>
-        <button className="btn-primary" onClick={() => setShowModal(true)}>+ Novo Cliente</button>
+        <button className="btn-primary" onClick={() => setShowModal(true)}><Plus size={16} />Novo Cliente</button>
       </div>
 
       {loading && <div className="loading">Carregando clientes...</div>}
@@ -102,8 +103,8 @@ const Clientes = () => {
                   <td>{cliente.email || '-'}</td>
                   <td>{cliente.telefone || '-'}</td>
                   <td>
-                    <button className="btn-small btn-edit">Editar</button>
-                    <button className="btn-small btn-delete" onClick={() => handleDelete(cliente.id)}>Excluir</button>
+                    <button className="btn-small btn-edit" title="Editar"><Pencil size={15} /></button>
+                    <button className="btn-small btn-delete" title="Excluir" onClick={() => handleDelete(cliente.id)}><Trash2 size={15} /></button>
                   </td>
                 </tr>
               ))}

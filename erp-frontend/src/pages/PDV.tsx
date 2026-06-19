@@ -3,6 +3,7 @@ import api from '../services/api';
 import type { Produto, Cliente } from '../types';
 import type { ItemVenda } from '../types';
 import VendaResumoModal, { type VendaResumo } from '../components/VendaResumoModal';
+import { Plus, X, Check, ShoppingCart } from 'lucide-react';
 import './PDV.css';
 
 const PDV = () => {
@@ -315,8 +316,9 @@ const PDV = () => {
                 />
               </div>
 
-              <button onClick={adicionarItem} className="btn-add">
-                + Adicionar
+              <button onClick={adicionarItem} className="btn-add"
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                <Plus size={16} />Adicionar
               </button>
             </div>
           </div>
@@ -355,7 +357,9 @@ const PDV = () => {
 
             {itensVenda.length === 0 ? (
               <div className="empty-cart">
-                <p>🛒 Carrinho vazio</p>
+                <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <ShoppingCart size={20} /> Carrinho vazio
+                </p>
                 <p>Adicione produtos para iniciar a venda</p>
               </div>
             ) : (
@@ -372,8 +376,10 @@ const PDV = () => {
                       <button
                         onClick={() => removerItem(item.produtoId)}
                         className="btn-remove"
+                        title="Remover"
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        ✕
+                        <X size={16} />
                       </button>
                     </div>
                   ))}
@@ -387,8 +393,9 @@ const PDV = () => {
                   onClick={finalizarVenda}
                   disabled={loading || !clienteSelecionado}
                   className="btn-finalizar"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
                 >
-                  {loading ? 'Processando...' : '✓ Finalizar Venda'}
+                  {loading ? 'Processando...' : <><Check size={16} />Finalizar Venda</>}
                 </button>
               </>
             )}

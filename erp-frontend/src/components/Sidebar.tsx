@@ -1,40 +1,47 @@
 import { Link, useLocation } from 'react-router-dom';
+import {
+  LayoutDashboard, ShoppingCart, ClipboardList, Calendar, Wallet,
+  Package, Users, Car, Wrench, Receipt,
+} from 'lucide-react';
 import './Sidebar.css';
+
+const menuItems = [
+  { path: '/', label: 'Dashboard', Icon: LayoutDashboard },
+  { path: '/pdv', label: 'PDV', Icon: ShoppingCart },
+  { path: '/ordens-servico', label: 'Ordens de Serviço', Icon: ClipboardList },
+  { path: '/agenda', label: 'Agenda / Box', Icon: Calendar },
+  { path: '/financeiro', label: 'Financeiro', Icon: Wallet },
+  { path: '/produtos', label: 'Produtos', Icon: Package },
+  { path: '/clientes', label: 'Clientes', Icon: Users },
+  { path: '/veiculos', label: 'Veículos', Icon: Car },
+  { path: '/servicos', label: 'Serviços', Icon: Wrench },
+  { path: '/notas', label: 'Notas', Icon: Receipt },
+];
 
 const Sidebar = () => {
   const location = useLocation();
 
-  const menuItems = [
-    { path: '/', label: 'Dashboard', icon: '📊' },
-    { path: '/pdv', label: 'PDV', icon: '🛒' },
-    { path: '/produtos', label: 'Produtos', icon: '📦' },
-    { path: '/clientes', label: 'Clientes', icon: '👥' },
-    { path: '/servicos', label: 'Serviços', icon: '🔧' },
-    { path: '/notas', label: 'Notas', icon: '🧾' },
-  ];
-
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-  <h1
-    className="sidebar-logo"
-    style={{ cursor: 'pointer' }}
-    onClick={() => (window.location.href = '/')}
-  >
-    B&B Car Sound
-  </h1>
-</div>
-
+        <h1
+          className="sidebar-logo"
+          style={{ cursor: 'pointer' }}
+          onClick={() => (window.location.href = '/')}
+        >
+          B&B Car Sound
+        </h1>
+      </div>
 
       <nav className="sidebar-nav">
-        {menuItems.map((item) => (
+        {menuItems.map(({ path, label, Icon }) => (
           <Link
-            key={item.path}
-            to={item.path}
-            className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+            key={path}
+            to={path}
+            className={`nav-item ${location.pathname === path ? 'active' : ''}`}
           >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
+            <Icon className="nav-icon" size={18} strokeWidth={2} />
+            <span className="nav-label">{label}</span>
           </Link>
         ))}
       </nav>

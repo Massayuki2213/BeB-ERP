@@ -6,6 +6,10 @@ import Clientes from './pages/Clientes';
 import Servicos from './pages/Servicos';
 import PDV from './pages/PDV';
 import NotasHistorico from './pages/NotasHistorico';
+import Veiculos from './pages/Veiculos';
+import OrdensServico from './pages/OrdensServico';
+import Financeiro from './pages/Financeiro';
+import Agenda from './pages/Agenda';
 import './App.css';
 
 function App() {
@@ -21,6 +25,10 @@ function App() {
             <Route path="/servicos" element={<Servicos />} />
             <Route path="/pdv" element={<PDV />} />
             <Route path="/notas" element={<NotasHistorico />} />
+            <Route path="/veiculos" element={<Veiculos />} />
+            <Route path="/ordens-servico" element={<OrdensServico />} />
+            <Route path="/financeiro" element={<Financeiro />} />
+            <Route path="/agenda" element={<Agenda />} />
           </Routes>
         </main>
       </div>

@@ -1,69 +1,82 @@
 .sidebar {
   width: 250px;
   height: 100vh;
-  background-color: #1a1a1a;
-  color: white;
+  background-color: #161616;
+  color: #e5e7eb;
   display: flex;
   flex-direction: column;
   position: fixed;
   left: 0;
   top: 0;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+  border-right: 1px solid #232323;
 }
 
 .sidebar-header {
-  padding: 2rem 1.5rem;
-  border-bottom: 2px solid #dc2626;
+  padding: 1.5rem 1.5rem 1.25rem;
+  border-bottom: 1px solid #232323;
 }
 
 .sidebar-logo {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: white;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+/* Acento vermelho da marca */
+.sidebar-logo::before {
+  content: '';
+  width: 10px;
+  height: 18px;
+  border-radius: 3px;
+  background: var(--color-primary);
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 1rem 0;
+  padding: 0.75rem;
+  overflow-y: auto;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  padding: 1rem 1.5rem;
-  color: #d1d5db;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 0.15rem;
+  color: #b3b3b3;
   text-decoration: none;
-  transition: all 0.3s ease;
-  border-left: 3px solid transparent;
+  border-radius: 8px;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .nav-item:hover {
-  background-color: #2d2d2d;
-  color: white;
-  border-left-color: #dc2626;
+  background-color: #232323;
+  color: #fff;
 }
 
 .nav-item.active {
-  background-color: #dc2626;
-  color: white;
-  border-left-color: #b91c1c;
+  background-color: var(--color-primary);
+  color: #fff;
 }
 
 .nav-icon {
-  font-size: 1.25rem;
-  margin-right: 0.75rem;
+  flex-shrink: 0;
 }
 
 .nav-label {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
 }
 
 .sidebar-footer {
-  padding: 1.5rem;
-  border-top: 1px solid #374151;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #232323;
   text-align: center;
-  font-size: 0.875rem;
-  color: #9ca3af;
+  font-size: 0.78rem;
+  color: #6b7280;
 }
