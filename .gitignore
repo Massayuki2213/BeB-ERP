@@ -1,6 +1,8 @@
 # Variáveis de ambiente (contêm segredos) — nunca versionar
 .env
+.env.prod
 !.env.example
+!.env.prod.example
 
 # Editores / SO
 .DS_Store

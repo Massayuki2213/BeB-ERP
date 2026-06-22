@@ -1,0 +1,19 @@
+# Caddy = porta de entrada da aplicação em produção.
+# - Provisiona HTTPS automático e gratuito (Let's Encrypt) para o domínio.
+# - Pede usuário e senha (basic auth) antes de liberar QUALQUER acesso.
+# - Repassa tudo para o frontend (nginx), que por sua vez serve o site e /api.
+#
+# Os valores abaixo vêm do arquivo .env.prod (SITE_ADDRESS, BASIC_AUTH_USER,
+# BASIC_AUTH_HASH). Não há segredos neste arquivo — pode ser versionado.
+
+{$SITE_ADDRESS} {
+	encode gzip
+
+	# Barreira de login: só passa quem tiver usuário + senha.
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+
+	# Repassa para o container do frontend (rede interna do Docker).
+	reverse_proxy frontend:80
+}
