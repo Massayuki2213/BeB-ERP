@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -33,7 +34,7 @@ public class ServicoController {
 
     @PostMapping
     @Operation(summary = "Cadastrar novo serviço", description = "Cria um novo serviço no banco de dados")
-    public ResponseEntity<Servicos> criar(@RequestBody ServicoDTO servicoDTO) {
+    public ResponseEntity<Servicos> criar(@Valid @RequestBody ServicoDTO servicoDTO) {
         Servicos novoServico = servicoService.salvar(servicoDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(novoServico);
     }
@@ -48,12 +49,8 @@ public class ServicoController {
     @PatchMapping("/{id}")
     @Operation(summary = "Atualizar serviço", description = "Atualiza os dados de um serviço existente")
     public ResponseEntity<Servicos> atualizar(@PathVariable Long id, @RequestBody Servicos servico) {
-        try {
-            Servicos servicoAtualizado = servicoService.atualizar(id, servico);
-            return ResponseEntity.ok(servicoAtualizado);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        Servicos servicoAtualizado = servicoService.atualizar(id, servico);
+        return ResponseEntity.ok(servicoAtualizado);
     }
 
 }

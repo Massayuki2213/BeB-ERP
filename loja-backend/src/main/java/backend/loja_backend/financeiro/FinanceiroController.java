@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -28,32 +29,20 @@ public class FinanceiroController {
 
     @PostMapping("/lancamentos")
     @Operation(summary = "Criar lançamento manual (receita/despesa ou conta a pagar/receber)")
-    public ResponseEntity<?> criar(@RequestBody LancamentoFinanceiroDTO dto) {
-        try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(service.criarManual(dto));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<LancamentoFinanceiro> criar(@Valid @RequestBody LancamentoFinanceiroDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.criarManual(dto));
     }
 
     @PatchMapping("/lancamentos/{id}/liquidar")
     @Operation(summary = "Liquidar (marcar como pago/recebido) — entra no fluxo de caixa")
-    public ResponseEntity<?> liquidar(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(service.liquidar(id));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<LancamentoFinanceiro> liquidar(@PathVariable Long id) {
+        return ResponseEntity.ok(service.liquidar(id));
     }
 
     @PatchMapping("/lancamentos/{id}/cancelar")
     @Operation(summary = "Cancelar lançamento")
-    public ResponseEntity<?> cancelar(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(service.cancelar(id));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<LancamentoFinanceiro> cancelar(@PathVariable Long id) {
+        return ResponseEntity.ok(service.cancelar(id));
     }
 
     @DeleteMapping("/lancamentos/{id}")

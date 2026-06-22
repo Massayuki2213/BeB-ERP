@@ -24,3 +24,12 @@ body {
   background-color: var(--bg);
   min-height: 100vh;
 }
+
+/* No celular a sidebar é um drawer: conteúdo ocupa a tela toda,
+   com espaço para a barra superior fixa. */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding-top: calc(56px + env(safe-area-inset-top, 0));
+  }
+}

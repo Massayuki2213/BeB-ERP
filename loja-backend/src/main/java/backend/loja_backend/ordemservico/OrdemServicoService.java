@@ -18,6 +18,12 @@ import backend.loja_backend.produto.ProdutoRepository;
 import backend.loja_backend.produto.Produtos;
 import backend.loja_backend.servico.ServicoRepository;
 import backend.loja_backend.servico.Servicos;
+import backend.loja_backend.common.exception.ClienteNaoEncontradoException;
+import backend.loja_backend.common.exception.OrdemServicoNaoEncontradaException;
+import backend.loja_backend.common.exception.ProdutoNaoEncontradoException;
+import backend.loja_backend.common.exception.RegraDeNegocioException;
+import backend.loja_backend.common.exception.ServicoNaoEncontradoException;
+import backend.loja_backend.common.exception.VeiculoNaoEncontradoException;
 import backend.loja_backend.veiculo.Veiculo;
 import backend.loja_backend.veiculo.VeiculoRepository;
 import jakarta.transaction.Transactional;
@@ -38,9 +44,9 @@ public class OrdemServicoService {
     @Transactional
     public OrdemServico criar(OrdemServicoDTO dto) {
         Clientes cliente = clienteRepository.findById(dto.getClienteId())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado: " + dto.getClienteId()));
+                .orElseThrow(() -> new ClienteNaoEncontradoException(dto.getClienteId()));
         Veiculo veiculo = veiculoRepository.findById(dto.getVeiculoId())
-                .orElseThrow(() -> new RuntimeException("Veículo não encontrado: " + dto.getVeiculoId()));
+                .orElseThrow(() -> new VeiculoNaoEncontradoException(dto.getVeiculoId()));
 
         OrdemServico os = new OrdemServico();
         os.setCliente(cliente);
@@ -97,11 +103,11 @@ public class OrdemServicoService {
 
         if (dto.getClienteId() != null) {
             os.setCliente(clienteRepository.findById(dto.getClienteId())
-                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado: " + dto.getClienteId())));
+                    .orElseThrow(() -> new ClienteNaoEncontradoException(dto.getClienteId())));
         }
         if (dto.getVeiculoId() != null) {
             os.setVeiculo(veiculoRepository.findById(dto.getVeiculoId())
-                    .orElseThrow(() -> new RuntimeException("Veículo não encontrado: " + dto.getVeiculoId())));
+                    .orElseThrow(() -> new VeiculoNaoEncontradoException(dto.getVeiculoId())));
         }
         if (dto.getDescricao() != null) {
             os.setDescricao(dto.getDescricao());
@@ -152,7 +158,7 @@ public class OrdemServicoService {
 
     private OrdemServico buscar(Long id) {
         return ordemServicoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada: " + id));
+                .orElseThrow(() -> new OrdemServicoNaoEncontradaException(id));
     }
 
     /** Dá baixa no estoque de cada peça da OS (SAIDA no Kardex). Valida saldo; rola back tudo se faltar. */
@@ -199,7 +205,7 @@ public class OrdemServicoService {
         List<ItemOS> itens = new ArrayList<>();
         for (ItemOSDTO d : dtos) {
             Produtos produto = produtoRepository.findById(d.getProdutoId())
-                    .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + d.getProdutoId()));
+                    .orElseThrow(() -> new ProdutoNaoEncontradoException(d.getProdutoId()));
             ItemOS item = new ItemOS();
             item.setOrdemServico(os);
             item.setProduto(produto);
@@ -219,7 +225,7 @@ public class OrdemServicoService {
             s.setOrdemServico(os);
             if (d.getServicoId() != null) {
                 Servicos cat = servicoRepository.findById(d.getServicoId())
-                        .orElseThrow(() -> new RuntimeException("Serviço não encontrado: " + d.getServicoId()));
+                        .orElseThrow(() -> new ServicoNaoEncontradoException(d.getServicoId()));
                 s.setServico(cat);
                 s.setDescricao(d.getDescricao() != null ? d.getDescricao() : cat.getNome());
                 s.setValor(d.getValor() != null
@@ -264,7 +270,7 @@ public class OrdemServicoService {
         try {
             return StatusOrdemServico.valueOf(s.trim().toUpperCase());
         } catch (IllegalArgumentException | NullPointerException e) {
-            throw new RuntimeException("Status inválido: " + s
+            throw new RegraDeNegocioException("Status inválido: " + s
                     + ". Use: ABERTA, EM_ANDAMENTO, AGUARDANDO_PECA, FINALIZADA, CANCELADA");
         }
     }

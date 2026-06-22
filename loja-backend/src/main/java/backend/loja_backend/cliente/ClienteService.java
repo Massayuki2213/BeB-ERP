@@ -3,6 +3,8 @@ package backend.loja_backend.cliente;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import backend.loja_backend.common.exception.ClienteNaoEncontradoException;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -40,7 +42,7 @@ public class ClienteService {
                 cliente.setCpfCnpj(clienteAtualizado.getCpfCnpj());
                 return clienteRepositorie.save(cliente);
             })
-            .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+            .orElseThrow(() -> new ClienteNaoEncontradoException("Cliente não encontrado"));
     }
 
     public void deletar(Long id) {

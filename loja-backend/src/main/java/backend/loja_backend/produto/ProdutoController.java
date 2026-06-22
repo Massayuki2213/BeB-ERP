@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 
 import backend.loja_backend.common.PageResponse;
 
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Set;
 
@@ -64,7 +65,7 @@ public class ProdutoController {
 
     @PostMapping
     @Operation(summary = "Cadastrar novo produto", description = "Cria um novo produto no banco de dados")
-    public ResponseEntity<Produtos> criar(@RequestBody ProdutoDTO produto) {
+    public ResponseEntity<Produtos> criar(@Valid @RequestBody ProdutoDTO produto) {
         Produtos novoProduto = produtoService.salvar(produto);
         return ResponseEntity.status(HttpStatus.CREATED).body(novoProduto);
     }
@@ -79,12 +80,8 @@ public class ProdutoController {
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar produto", description = "Atualiza os dados de um produto existente")
     public ResponseEntity<Produtos> atualizar(@PathVariable Long id, @RequestBody Produtos produto) {
-        try {
-            Produtos produtoAtualizado = produtoService.atualizar(id, produto);
-            return ResponseEntity.ok(produtoAtualizado);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        Produtos produtoAtualizado = produtoService.atualizar(id, produto);
+        return ResponseEntity.ok(produtoAtualizado);
     }
 
 }

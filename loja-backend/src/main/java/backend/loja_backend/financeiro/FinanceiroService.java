@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
+import backend.loja_backend.common.exception.LancamentoNaoEncontradoException;
+import backend.loja_backend.common.exception.RegraDeNegocioException;
+
 @Service
 @RequiredArgsConstructor
 public class FinanceiroService {
@@ -80,10 +83,10 @@ public class FinanceiroService {
     @Transactional
     public LancamentoFinanceiro criarManual(LancamentoFinanceiroDTO dto) {
         if (dto.getTipo() == null) {
-            throw new RuntimeException("tipo é obrigatório (RECEITA ou DESPESA)");
+            throw new RegraDeNegocioException("tipo é obrigatório (RECEITA ou DESPESA)");
         }
         if (dto.getValor() == null || dto.getValor().signum() <= 0) {
-            throw new RuntimeException("valor deve ser maior que zero");
+            throw new RegraDeNegocioException("valor deve ser maior que zero");
         }
         LancamentoFinanceiro l = new LancamentoFinanceiro();
         l.setTipo(dto.getTipo());
@@ -211,7 +214,7 @@ public class FinanceiroService {
     }
 
     private LancamentoFinanceiro buscar(Long id) {
-        return repo.findById(id).orElseThrow(() -> new RuntimeException("Lançamento não encontrado: " + id));
+        return repo.findById(id).orElseThrow(() -> new LancamentoNaoEncontradoException(id));
     }
 
     private BigDecimal nz(BigDecimal v) {

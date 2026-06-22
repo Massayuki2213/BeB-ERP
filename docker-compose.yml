@@ -11,6 +11,8 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+      # Cria o banco "loja_test" na primeira inicialização do volume (usado só nos testes).
+      - ./db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -39,7 +41,8 @@ services:
       context: ./erp-frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api}
+        # Relativa: o nginx do front repassa /api -> backend (mesma origem).
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
     container_name: beb-frontend
     restart: unless-stopped
     depends_on:

@@ -6,6 +6,9 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import backend.loja_backend.common.exception.EstoqueInsuficienteException;
+import backend.loja_backend.common.exception.ProdutoNaoEncontradoException;
+import backend.loja_backend.common.exception.RegraDeNegocioException;
 import backend.loja_backend.produto.ProdutoRepository;
 import backend.loja_backend.produto.Produtos;
 import jakarta.transaction.Transactional;
@@ -32,7 +35,7 @@ public class EstoqueService {
         Produtos produto = buscarProduto(produtoId);
         BigDecimal saldo = saldoAtual(produto);
         if (saldo.compareTo(quantidade) < 0) {
-            throw new RuntimeException("Estoque insuficiente para o produto: " + produto.getNome()
+            throw new EstoqueInsuficienteException("Estoque insuficiente para o produto: " + produto.getNome()
                     + " (saldo " + saldo + ", saída " + quantidade + ")");
         }
         return aplicar(produto, TipoMovimentacao.SAIDA, quantidade, saldo.subtract(quantidade), observacao);
@@ -41,7 +44,7 @@ public class EstoqueService {
     @Transactional
     public MovimentacaoEstoque registrarAjuste(Long produtoId, BigDecimal novoSaldo, String observacao) {
         if (novoSaldo == null || novoSaldo.signum() < 0) {
-            throw new RuntimeException("Saldo de ajuste inválido: " + novoSaldo);
+            throw new RegraDeNegocioException("Saldo de ajuste inválido: " + novoSaldo);
         }
         Produtos produto = buscarProduto(produtoId);
         BigDecimal delta = novoSaldo.subtract(saldoAtual(produto)).abs();
@@ -75,7 +78,7 @@ public class EstoqueService {
 
     private Produtos buscarProduto(Long produtoId) {
         return produtoRepository.findById(produtoId)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + produtoId));
+                .orElseThrow(() -> new ProdutoNaoEncontradoException(produtoId));
     }
 
     private BigDecimal saldoAtual(Produtos produto) {
@@ -84,7 +87,7 @@ public class EstoqueService {
 
     private void validarPositiva(BigDecimal quantidade) {
         if (quantidade == null || quantidade.signum() <= 0) {
-            throw new RuntimeException("Quantidade deve ser maior que zero: " + quantidade);
+            throw new RegraDeNegocioException("Quantidade deve ser maior que zero: " + quantidade);
         }
     }
 }

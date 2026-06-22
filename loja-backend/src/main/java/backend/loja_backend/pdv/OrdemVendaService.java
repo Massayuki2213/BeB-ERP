@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 
 import backend.loja_backend.cliente.ClienteRepository;
 import backend.loja_backend.cliente.Clientes;
+import backend.loja_backend.common.exception.ClienteNaoEncontradoException;
+import backend.loja_backend.common.exception.ProdutoNaoEncontradoException;
+import backend.loja_backend.common.exception.RegraDeNegocioException;
+import backend.loja_backend.common.exception.VendaNaoEncontradaException;
 import backend.loja_backend.estoque.EstoqueService;
 import backend.loja_backend.financeiro.FinanceiroService;
 import backend.loja_backend.produto.ProdutoRepository;
@@ -31,7 +35,7 @@ public class OrdemVendaService {
     @Transactional
     public OrdemVenda criarOrdemVenda(OrdemVendasDTO dto) {
         if (dto.getItensVendas() == null || dto.getItensVendas().isEmpty()) {
-            throw new RuntimeException("A venda precisa de ao menos um item.");
+            throw new RegraDeNegocioException("A venda precisa de ao menos um item.");
         }
 
         OrdemVenda ordem = new OrdemVenda();
@@ -39,7 +43,7 @@ public class OrdemVendaService {
         // Cliente é opcional (venda rápida de balcão)
         if (dto.getClienteId() != null) {
             Clientes cliente = clienteRepository.findById(dto.getClienteId())
-                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado: " + dto.getClienteId()));
+                    .orElseThrow(() -> new ClienteNaoEncontradoException(dto.getClienteId()));
             ordem.setCliente(cliente);
         }
 
@@ -55,7 +59,7 @@ public class OrdemVendaService {
 
         for (ItensVendasDTO itemDTO : dto.getItensVendas()) {
             Produtos produto = produtoRepository.findById(itemDTO.getProdutoId())
-                    .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + itemDTO.getProdutoId()));
+                    .orElseThrow(() -> new ProdutoNaoEncontradoException(itemDTO.getProdutoId()));
 
             BigDecimal quantidade = itemDTO.getQuantidade();
             BigDecimal precoUnitario = itemDTO.getPrecoUnitario() != null
@@ -100,7 +104,7 @@ public class OrdemVendaService {
     @Transactional
     public void deletar(Long id) {
         OrdemVenda ordem = ordemVendaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Venda não encontrada: " + id));
+                .orElseThrow(() -> new VendaNaoEncontradaException(id));
 
         // Estorna o estoque das peças vendidas (criar dá baixa, excluir devolve)
         if (ordem.getItensVendas() != null) {

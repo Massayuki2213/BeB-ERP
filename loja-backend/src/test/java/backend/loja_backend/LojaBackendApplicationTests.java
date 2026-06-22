@@ -1,13 +1,12 @@
 package backend.loja_backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class LojaBackendApplicationTests {
+class LojaBackendApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoads() {
+		// Verifica que o contexto Spring sobe corretamente com o banco em execução
 	}
 
 }

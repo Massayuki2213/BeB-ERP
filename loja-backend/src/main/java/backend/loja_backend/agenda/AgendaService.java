@@ -7,6 +7,11 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 import backend.loja_backend.cliente.ClienteRepository;
+import backend.loja_backend.common.exception.AgendamentoNaoEncontradoException;
+import backend.loja_backend.common.exception.ClienteNaoEncontradoException;
+import backend.loja_backend.common.exception.OrdemServicoNaoEncontradaException;
+import backend.loja_backend.common.exception.RegraDeNegocioException;
+import backend.loja_backend.common.exception.VeiculoNaoEncontradoException;
 import backend.loja_backend.ordemservico.OrdemServicoRepository;
 import backend.loja_backend.veiculo.VeiculoRepository;
 import jakarta.transaction.Transactional;
@@ -81,26 +86,26 @@ public class AgendaService {
 
         if (dto.getClienteId() != null) {
             a.setCliente(clienteRepository.findById(dto.getClienteId())
-                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado: " + dto.getClienteId())));
+                    .orElseThrow(() -> new ClienteNaoEncontradoException(dto.getClienteId())));
         }
         if (dto.getVeiculoId() != null) {
             a.setVeiculo(veiculoRepository.findById(dto.getVeiculoId())
-                    .orElseThrow(() -> new RuntimeException("Veículo não encontrado: " + dto.getVeiculoId())));
+                    .orElseThrow(() -> new VeiculoNaoEncontradoException(dto.getVeiculoId())));
         }
         if (dto.getOrdemServicoId() != null) {
             a.setOrdemServico(ordemServicoRepository.findById(dto.getOrdemServicoId())
-                    .orElseThrow(() -> new RuntimeException("OS não encontrada: " + dto.getOrdemServicoId())));
+                    .orElseThrow(() -> new OrdemServicoNaoEncontradaException(dto.getOrdemServicoId())));
         }
     }
 
     private void validar(Agendamento a) {
-        if (a.getBox() == null) throw new RuntimeException("box é obrigatório");
-        if (a.getDataHoraInicio() == null) throw new RuntimeException("dataHoraInicio é obrigatória");
+        if (a.getBox() == null) throw new RegraDeNegocioException("box é obrigatório");
+        if (a.getDataHoraInicio() == null) throw new RegraDeNegocioException("dataHoraInicio é obrigatória");
         if (a.getDataHoraFim() == null) {
             a.setDataHoraFim(a.getDataHoraInicio().plusHours(1));
         }
         if (!a.getDataHoraFim().isAfter(a.getDataHoraInicio())) {
-            throw new RuntimeException("dataHoraFim deve ser depois de dataHoraInicio");
+            throw new RegraDeNegocioException("dataHoraFim deve ser depois de dataHoraInicio");
         }
 
         // Não encavalar: nenhum outro agendamento ativo no mesmo box sobreposto no tempo
@@ -109,20 +114,20 @@ public class AgendaService {
         boolean conflito = sobrepostos.stream()
                 .anyMatch(o -> o.getStatus() != StatusAgendamento.CANCELADO && !o.getId().equals(a.getId()));
         if (conflito) {
-            throw new RuntimeException("Box " + a.getBox() + " já está ocupado nesse horário.");
+            throw new RegraDeNegocioException("Box " + a.getBox() + " já está ocupado nesse horário.");
         }
     }
 
     private Agendamento buscar(Long id) {
         return repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Agendamento não encontrado: " + id));
+                .orElseThrow(() -> new AgendamentoNaoEncontradoException(id));
     }
 
     private StatusAgendamento parseStatus(String s) {
         try {
             return StatusAgendamento.valueOf(s.trim().toUpperCase());
         } catch (IllegalArgumentException | NullPointerException e) {
-            throw new RuntimeException("Status inválido: " + s
+            throw new RegraDeNegocioException("Status inválido: " + s
                     + ". Use: AGENDADO, EM_ANDAMENTO, CONCLUIDO, CANCELADO, NAO_COMPARECEU");
         }
     }

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -48,23 +49,15 @@ public class VeiculoController {
 
     @PostMapping
     @Operation(summary = "Cadastrar novo veículo")
-    public ResponseEntity<?> criar(@RequestBody VeiculoDTO dto) {
-        try {
-            Veiculo novo = veiculoService.salvar(dto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(novo);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<Veiculo> criar(@Valid @RequestBody VeiculoDTO dto) {
+        Veiculo novo = veiculoService.salvar(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(novo);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar veículo")
-    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody VeiculoDTO dto) {
-        try {
-            return ResponseEntity.ok(veiculoService.atualizar(id, dto));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<Veiculo> atualizar(@PathVariable Long id, @Valid @RequestBody VeiculoDTO dto) {
+        return ResponseEntity.ok(veiculoService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")

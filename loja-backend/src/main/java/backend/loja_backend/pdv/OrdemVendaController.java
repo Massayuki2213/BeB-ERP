@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -17,12 +18,8 @@ public class OrdemVendaController {
     private final OrdemVendaService ordemVendaService;
 
     @PostMapping
-    public ResponseEntity<?> criarOrdemVenda(@RequestBody OrdemVendasDTO dto) {
-        try {
-            return ResponseEntity.ok(ordemVendaService.criarOrdemVenda(dto));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<OrdemVenda> criarOrdemVenda(@Valid @RequestBody OrdemVendasDTO dto) {
+        return ResponseEntity.ok(ordemVendaService.criarOrdemVenda(dto));
     }
 
     @GetMapping

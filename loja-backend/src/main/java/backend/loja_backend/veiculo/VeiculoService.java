@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 
 import backend.loja_backend.cliente.ClienteRepository;
 import backend.loja_backend.cliente.Clientes;
+import backend.loja_backend.common.exception.ClienteNaoEncontradoException;
+import backend.loja_backend.common.exception.VeiculoNaoEncontradoException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -34,7 +36,7 @@ public class VeiculoService {
 
     public Veiculo salvar(VeiculoDTO dto) {
         Clientes cliente = clienteRepository.findById(dto.getClienteId())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado: " + dto.getClienteId()));
+                .orElseThrow(() -> new ClienteNaoEncontradoException(dto.getClienteId()));
 
         Veiculo veiculo = new Veiculo();
         veiculo.setPlaca(dto.getPlaca());
@@ -48,12 +50,12 @@ public class VeiculoService {
 
     public Veiculo atualizar(Long id, VeiculoDTO dto) {
         Veiculo veiculo = veiculoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Veículo não encontrado: " + id));
+                .orElseThrow(() -> new VeiculoNaoEncontradoException(id));
 
         // cliente e placa são obrigatórios: só troca se vier no payload
         if (dto.getClienteId() != null) {
             Clientes cliente = clienteRepository.findById(dto.getClienteId())
-                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado: " + dto.getClienteId()));
+                    .orElseThrow(() -> new ClienteNaoEncontradoException(dto.getClienteId()));
             veiculo.setCliente(cliente);
         }
         if (dto.getPlaca() != null) {

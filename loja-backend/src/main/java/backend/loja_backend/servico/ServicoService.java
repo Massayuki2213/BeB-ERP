@@ -4,6 +4,8 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import backend.loja_backend.common.exception.ServicoNaoEncontradoException;
+
 @Service
 public class ServicoService {
 
@@ -37,7 +39,7 @@ public class ServicoService {
                 servico.setCategoria(servicoAtualizado.getCategoria());
                 return servicoRepositorie.save(servico);
             })
-            .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+            .orElseThrow(() -> new ServicoNaoEncontradoException("Serviço não encontrado"));
     }
 
     public void deletar(Long id) {

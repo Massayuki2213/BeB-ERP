@@ -6,8 +6,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import backend.loja_backend.common.exception.OrdemServicoNaoEncontradaException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -27,7 +29,9 @@ public class OrdemServicoController {
     @GetMapping("/{id}")
     @Operation(summary = "Buscar OS por ID")
     public ResponseEntity<OrdemServico> buscar(@PathVariable Long id) {
-        return service.buscarPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        OrdemServico os = service.buscarPorId(id)
+                .orElseThrow(() -> new OrdemServicoNaoEncontradaException(id));
+        return ResponseEntity.ok(os);
     }
 
     @GetMapping("/cliente/{clienteId}")
@@ -44,32 +48,20 @@ public class OrdemServicoController {
 
     @PostMapping
     @Operation(summary = "Abrir nova OS")
-    public ResponseEntity<?> criar(@RequestBody OrdemServicoDTO dto) {
-        try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(dto));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<OrdemServico> criar(@Valid @RequestBody OrdemServicoDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(dto));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar OS (dados, itens, serviços)")
-    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody OrdemServicoDTO dto) {
-        try {
-            return ResponseEntity.ok(service.atualizar(id, dto));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<OrdemServico> atualizar(@PathVariable Long id, @Valid @RequestBody OrdemServicoDTO dto) {
+        return ResponseEntity.ok(service.atualizar(id, dto));
     }
 
     @PatchMapping("/{id}/status")
     @Operation(summary = "Alterar status (ABERTA, EM_ANDAMENTO, AGUARDANDO_PECA, FINALIZADA, CANCELADA)")
-    public ResponseEntity<?> alterarStatus(@PathVariable Long id, @RequestParam String status) {
-        try {
-            return ResponseEntity.ok(service.atualizarStatus(id, status));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<OrdemServico> alterarStatus(@PathVariable Long id, @RequestParam String status) {
+        return ResponseEntity.ok(service.atualizarStatus(id, status));
     }
 
     @DeleteMapping("/{id}")

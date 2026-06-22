@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -21,19 +22,19 @@ public class EstoqueController {
 
     @PostMapping("/entrada")
     @Operation(summary = "Registrar entrada de estoque (compra, devolução)")
-    public ResponseEntity<?> entrada(@RequestBody MovimentacaoEstoqueDTO dto) {
+    public ResponseEntity<?> entrada(@Valid @RequestBody MovimentacaoEstoqueDTO dto) {
         return executar(() -> estoqueService.registrarEntrada(dto.getProdutoId(), dto.getQuantidade(), dto.getObservacao()));
     }
 
     @PostMapping("/saida")
     @Operation(summary = "Registrar saída manual de estoque (perda, uso interno)")
-    public ResponseEntity<?> saida(@RequestBody MovimentacaoEstoqueDTO dto) {
+    public ResponseEntity<?> saida(@Valid @RequestBody MovimentacaoEstoqueDTO dto) {
         return executar(() -> estoqueService.registrarSaida(dto.getProdutoId(), dto.getQuantidade(), dto.getObservacao()));
     }
 
     @PostMapping("/ajuste")
     @Operation(summary = "Ajustar saldo para um valor absoluto (inventário). Campo 'quantidade' = novo saldo")
-    public ResponseEntity<?> ajuste(@RequestBody MovimentacaoEstoqueDTO dto) {
+    public ResponseEntity<?> ajuste(@Valid @RequestBody MovimentacaoEstoqueDTO dto) {
         return executar(() -> estoqueService.registrarAjuste(dto.getProdutoId(), dto.getQuantidade(), dto.getObservacao()));
     }
 
@@ -49,11 +50,7 @@ public class EstoqueController {
         return estoqueService.listarTodas();
     }
 
-    private ResponseEntity<?> executar(Supplier<MovimentacaoEstoque> acao) {
-        try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(acao.get());
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    private ResponseEntity<MovimentacaoEstoque> executar(Supplier<MovimentacaoEstoque> acao) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(acao.get());
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -33,7 +34,7 @@ public class ClienteController {
 
     @PostMapping
     @Operation(summary = "Cadastrar novo cliente", description = "Cria um novo cliente no banco de dados")
-    public ResponseEntity<Clientes> criar(@RequestBody ClienteDTO cliente) {
+    public ResponseEntity<Clientes> criar(@Valid @RequestBody ClienteDTO cliente) {
         Clientes novoCliente = clienteService.salvar(cliente);
         return ResponseEntity.status(HttpStatus.CREATED).body(novoCliente);
     }
@@ -41,12 +42,8 @@ public class ClienteController {
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar cliente", description = "Atualiza os dados de um cliente existente")
     public ResponseEntity<Clientes> atualizar(@PathVariable Long id, @RequestBody Clientes cliente) {
-        try {
-            Clientes clienteAtualizado = clienteService.atualizar(id, cliente);
-            return ResponseEntity.ok(clienteAtualizado);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        Clientes clienteAtualizado = clienteService.atualizar(id, cliente);
+        return ResponseEntity.ok(clienteAtualizado);
     }
 
     @DeleteMapping("/{id}")

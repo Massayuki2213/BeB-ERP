@@ -414,3 +414,35 @@ h2 {
   font-size: 0.9rem;
   color: var(--text);
 }
+
+/* ===================== Mobile (celular / PWA) ===================== */
+@media (max-width: 768px) {
+  .page-container { padding: 1rem 1rem 2rem; }
+
+  .page-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .page-title { font-size: 1.35rem; }
+
+  /* Tabelas largas rolam na horizontal em vez de espremer/cortar */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .data-table { min-width: 640px; }
+
+  /* Grids de cards e formulários lado-a-lado empilham */
+  .dashboard-grid { grid-template-columns: 1fr 1fr; }
+
+  .search-box { max-width: none; min-width: 0; width: 100%; }
+
+  /* Modais ocupam quase toda a tela, com uma folga nas bordas */
+  .modal-overlay { padding: 0.75rem; }
+  .modal { width: 100%; max-height: 92vh; overflow-y: auto; }
+}
+
+@media (max-width: 480px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+}

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -54,32 +55,20 @@ public class AgendaController {
 
     @PostMapping
     @Operation(summary = "Criar agendamento (valida conflito de box)")
-    public ResponseEntity<?> criar(@RequestBody AgendamentoDTO dto) {
-        try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(dto));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<Agendamento> criar(@Valid @RequestBody AgendamentoDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(dto));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar agendamento (valida conflito de box)")
-    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody AgendamentoDTO dto) {
-        try {
-            return ResponseEntity.ok(service.atualizar(id, dto));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<Agendamento> atualizar(@PathVariable Long id, @Valid @RequestBody AgendamentoDTO dto) {
+        return ResponseEntity.ok(service.atualizar(id, dto));
     }
 
     @PatchMapping("/{id}/status")
     @Operation(summary = "Alterar status (AGENDADO, EM_ANDAMENTO, CONCLUIDO, CANCELADO, NAO_COMPARECEU)")
-    public ResponseEntity<?> alterarStatus(@PathVariable Long id, @RequestParam String status) {
-        try {
-            return ResponseEntity.ok(service.atualizarStatus(id, status));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body("Erro: " + e.getMessage());
-        }
+    public ResponseEntity<Agendamento> alterarStatus(@PathVariable Long id, @RequestParam String status) {
+        return ResponseEntity.ok(service.atualizarStatus(id, status));
     }
 
     @DeleteMapping("/{id}")
