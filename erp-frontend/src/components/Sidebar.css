@@ -109,9 +109,11 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 56px;
+    /* A altura SOMA a área do status bar/notch; com box-sizing:border-box o
+       padding-top reserva o notch e ainda sobram 56px para o conteúdo. */
+    height: calc(56px + env(safe-area-inset-top, 0px));
     padding: 0 1rem;
-    padding-top: env(safe-area-inset-top, 0);
+    padding-top: env(safe-area-inset-top, 0px);
     background: #161616;
     border-bottom: 1px solid #232323;
     z-index: 900;
@@ -140,6 +142,8 @@
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
     width: 270px;
     max-width: 85vw;
+    /* Empurra o cabeçalho (logo + X) para baixo do status bar/notch */
+    padding-top: env(safe-area-inset-top, 0px);
   }
   .sidebar.open { transform: translateX(0); }
 
