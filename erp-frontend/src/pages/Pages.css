@@ -162,6 +162,22 @@ h2 {
   margin-bottom: 1.5rem;
 }
 
+/* Duas colunas lado-a-lado (ex.: tabelas do Dashboard/Financeiro).
+   Substitui grids inline para poder colapsar no celular. */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.grid-2--dash {
+  grid-template-columns: 1.3fr 1fr;
+}
+/* Deixa as colunas encolherem para a tabela rolar dentro do .table-container
+   em vez de esticar a coluna (min-width:auto é o padrão em itens de grid). */
+.grid-2 > * {
+  min-width: 0;
+}
+
 .dashboard-card {
   background-color: var(--surface);
   border: 1px solid var(--border);
@@ -435,6 +451,10 @@ h2 {
 
   /* Grids de cards e formulários lado-a-lado empilham */
   .dashboard-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Tabelas/blocos lado-a-lado viram uma coluna só */
+  .grid-2,
+  .grid-2--dash { grid-template-columns: 1fr; }
 
   .search-box { max-width: none; min-width: 0; width: 100%; }
 

@@ -99,7 +99,7 @@ const Financeiro = () => {
         <button className="btn-primary" onClick={() => setShowModal(true)}><Plus size={16} />Lançamento</button>
       </div>
 
-      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <label style={{ fontWeight: 600 }}>Período:</label>
         <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)}
                style={{ padding: '0.5rem', borderRadius: 6, border: '1px solid #ccc' }} />
@@ -137,7 +137,7 @@ const Financeiro = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+      <div className="grid-2" style={{ marginBottom: '2rem' }}>
         <div>
           <h2 style={{ fontSize: '1.2rem' }}>Contas a Pagar</h2>
           <div className="table-container">

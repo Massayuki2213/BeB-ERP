@@ -151,7 +151,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '1.5rem' }}>
+      <div className="grid-2 grid-2--dash">
         {/* Fluxo de caixa diário */}
         <div>
           <h2 style={{ fontSize: '1.2rem' }}>Fluxo de Caixa Diário (mês)</h2>

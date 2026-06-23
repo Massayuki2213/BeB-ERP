@@ -20,6 +20,9 @@ body {
 
 .main-content {
   flex: 1;
+  /* Permite encolher abaixo da largura do conteúdo; sem isso, tabelas e grids
+     largos esticam a página inteira no celular em vez de rolarem internamente. */
+  min-width: 0;
   margin-left: 250px;
   background-color: var(--bg);
   min-height: 100vh;
